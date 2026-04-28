@@ -103,6 +103,46 @@ canvas { display:block; width:100%; height:100%; }
 video, img { width:100%; height:auto; border-radius:6px; background:#000; }
 audio { width:100%; }
 
+/* Room navigation bar */
+#room-nav {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 100;
+  pointer-events: auto;
+}
+.room-btn {
+  background: rgba(10,10,12,0.78);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: var(--muted);
+  font-family: Inter, Roboto, system-ui, sans-serif;
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background .18s, color .18s, border-color .18s;
+  white-space: nowrap;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.room-btn:hover:not(:disabled) {
+  background: rgba(110,231,183,0.12);
+  border-color: rgba(110,231,183,0.35);
+  color: #fff;
+}
+.room-btn.active {
+  background: rgba(110,231,183,0.15);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.room-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 /* Tiny UI hint */
 .hint {
   position: absolute;
