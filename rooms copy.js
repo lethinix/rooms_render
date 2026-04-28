@@ -1,6 +1,5 @@
 // Replace these filenames if you use different names or locations (assets/ folder recommended)
-const PANORAMA = 'assets/pan_render_room1_5_0000_0001.png';
-// const PANORAMA = 'assets/pan_render_room1_0002.png'; // equirectangular PNG (you said this is in assets/)
+const PANORAMA = 'assets/pan_render_room1_0002.png'; // equirectangular PNG (you said this is in assets/)
 const AUDIO_FILE = 'assets/The Past Room Pt 2.m4a';       // put your MP3 in assets/ or change path
 const VIDEO_FILE = 'assets/tv_video.mp4';          // put your MP4/PNG in assets/ or change path
 
@@ -127,7 +126,7 @@ const hotspots = [
   {
     id:'books',
     title:'Book 1 — Introduction',
-    theta: -4.7, phi:  -15.2,
+    theta: -3.5, phi:  -6,
     type:'text',
     content: `<div class="text-scroll">
       <p><strong>I. Introduction</strong></p>
@@ -150,42 +149,42 @@ const hotspots = [
   {
     id:'radio',
     title:'Radio — Audio Archive',
-    theta: -7.6, phi: -15.1,
+    theta: -4.5, phi: -6,
     type:'audio',
     content: AUDIO_FILE
   },
   {
     id:'tv',
     title:'TV — Visual Artifact',
-    theta: 21.5, phi: -17.2,
+    theta: 7.5, phi: -7,
     type:'video',
     content: VIDEO_FILE
   },
   {
     id: 'video1',
     title: 'Window 1 — Wagtail',
-    theta: -21.3, phi: -4.9,
+    theta: -11.5, phi: -2.5,
     type: 'video',
     content: 'assets/wagtail.mp4'
   },
   {
     id: 'video2',
     title: 'Window 2 — Harebells',
-    theta: -8.2, phi: -4.0,
+    theta: -5, phi: -2.5,
     type: 'video',
     content: 'assets/harebells.mp4'
   },
   {
     id: 'video3',
     title: 'Window 3 — Plant Sways',
-    theta: 6.3, phi: -4.1,
+    theta: 2.5, phi: -2.5,
     type: 'video',
     content: 'assets/plant_sways.mp4'
   },
   {
     id: 'video4',
     title: 'Window 4 — Field',
-    theta: 20.4, phi: -4.7,
+    theta: 8.7, phi: -2.5,
     type: 'video',
     content: 'assets/field.mp4'
   }
@@ -266,10 +265,9 @@ renderer.domElement.addEventListener('touchstart', onPointerDown, {passive:true}
 
 // show labels only on hover: update hoveredHotspotId on pointer move/leave
 function onPointerMove(event) {
+  const rect = renderer.domElement.getBoundingClientRect();
   const clientX = event.clientX;
   const clientY = event.clientY;
-  // update hover detection (existing behavior)
-  const rect = renderer.domElement.getBoundingClientRect();
   pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
   pointer.y = - ((clientY - rect.top) / rect.height) * 2 + 1;
 
@@ -282,27 +280,13 @@ function onPointerMove(event) {
     hoveredHotspotId = null;
     renderer.domElement.style.cursor = '';
   }
-
-  // update theta/phi HUD
-  updateCoordsFromPointer(clientX, clientY);
 }
-
 function onPointerLeave() {
   hoveredHotspotId = null;
   renderer.domElement.style.cursor = '';
-  coordHUD.style.display = 'none';
 }
-
-renderer.domElement.removeEventListener('pointermove', onPointerMove); // safe no-op if not present
-renderer.domElement.removeEventListener('mouseleave', onPointerLeave);
-renderer.domElement.addEventListener('pointermove', onPointerMove, { passive: true });
+renderer.domElement.addEventListener('pointermove', onPointerMove, {passive:true});
 renderer.domElement.addEventListener('mouseleave', onPointerLeave);
-
-// support touch move to show coords (two-finger pinch or single touch)
-renderer.domElement.addEventListener('touchmove', (e) => {
-  const t = e.touches[0];
-  updateCoordsFromPointer(t.clientX, t.clientY);
-}, { passive: true });
 
 // Update label positions on render (position always updated; visibility only when hovered)
 function updateLabels() {
@@ -397,7 +381,7 @@ window.addEventListener('keydown', (e) => {
 
 // --- set initial view to the centroid direction of the hotspots ---
 // compute centroid of hotspot positions and point the camera there
-function setInitialViewToHotspots({ animate = true, duration = 600 } = {}) {
+(function setInitialViewToHotspots({ animate = true, duration = 600 } = {}) {
   if (hotspotObjects.length === 0) return;
 
   // compute average position (in world space)
@@ -433,51 +417,7 @@ function setInitialViewToHotspots({ animate = true, duration = 600 } = {}) {
     if (t < 1) requestAnimationFrame(step);
   }
   requestAnimationFrame(step);
-}
+})();
 
 // call it once after hotspots are created
 setInitialViewToHotspots({ animate: false });
-
-// create small theta/phi HUD
-const coordHUD = document.createElement('div');
-coordHUD.id = 'coordHUD';
-coordHUD.style.cssText = [
-  'position:fixed',
-  'top:0',
-  'left:0',
-  'padding:6px 10px',
-  'background:rgba(0,0,0,0.72)',
-  'color:#6ee7b7',
-  'font-family: Inter, Roboto, system-ui, sans-serif',
-  'font-size:12px',
-  'line-height:1.4',
-  'border-radius:6px',
-  'z-index:9999',
-  'pointer-events:none',
-  'white-space:nowrap',
-  'display:none',
-  'transform:translate(14px, 14px)'
-].join(';');
-coordHUD.innerHTML = 'θ: —°  φ: —°';
-document.body.appendChild(coordHUD);
-
-// Raycaster pointer handling (replace existing onPointerMove/onPointerLeave)
-function updateCoordsFromPointer(clientX, clientY) {
-  const rect = renderer.domElement.getBoundingClientRect();
-  if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
-    coordHUD.style.display = 'none';
-    return;
-  }
-  pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
-  pointer.y = - ((clientY - rect.top) / rect.height) * 2 + 1;
-
-  raycaster.setFromCamera(pointer, camera);
-  const dir = raycaster.ray.direction.clone().normalize();
-  const thetaDeg = THREE.MathUtils.radToDeg(Math.atan2(dir.z, dir.x));
-  const phiDeg = 90 - THREE.MathUtils.radToDeg(Math.acos(THREE.MathUtils.clamp(dir.y, -1, 1)));
-
-  coordHUD.innerHTML = `θ: ${thetaDeg.toFixed(1)}°  φ: ${phiDeg.toFixed(1)}°`;
-  coordHUD.style.display = 'block';
-  coordHUD.style.left = clientX + 'px';
-  coordHUD.style.top = clientY + 'px';
-}
