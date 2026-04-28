@@ -79,28 +79,28 @@ const ROOMS = [
     id: 'present',
     label: 'The Present Room',
     panorama: 'assets/pan_render_room2_1_0000_0001.png',
+    hotspots: []
+  },
+  {
+    id: 'future',
+    label: 'The Future Room',
+    panorama: 'assets/pan_render_room3_1_0000_0001.png',
     hotspots: [
       {
         id: 'screen-left',
         title: 'Page 1',
         theta: -2, phi: 0,   // ← use θ/φ HUD to position on screen
         type: 'link',
-        url: 'https://your-website.com/page-1'
+        url: 'https://aishaa.net/projects/predictive_model/climate_projection_ssp245.html'
       },
       {
         id: 'screen-right',
         title: 'Page 2',
         theta:  2, phi: 0,   // ← use θ/φ HUD to position on screen
         type: 'link',
-        url: 'https://your-website.com/page-2'
+        url: 'https://aishaa.net/projects/predictive_model/house_impact.html'
       },
     ]
-  },
-  {
-    id: 'future',
-    label: 'The Future Room',
-    panorama: 'assets/pan_render_room3_1_0000_0001.png',
-    hotspots: []
   }
 ];
 
