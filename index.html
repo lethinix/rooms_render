@@ -1,0 +1,33 @@
+<!-- // ...existing code... -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>2110 Blue Lawn Road — 360° Room (Past Room)</title>
+
+  <!-- link to external stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="container" aria-label="360 room viewer"></div>
+  <div class="hint">Drag or touch to look around · Pinch to zoom · Tap hotspots</div>
+
+  <!-- Overlay panels -->
+  <div id="overlay" class="overlay" role="dialog" aria-hidden="true">
+    <div class="panel" role="document">
+      <div class="header">
+        <h2 id="panel-title">Title</h2>
+        <button id="closeBtn" class="close" aria-label="Close panel">✕</button>
+      </div>
+      <div class="content" id="panel-content">
+        <!-- content injected -->
+      </div>
+    </div>
+  </div>
+
+  <!-- module script now in rooms.js -->
+  <script type="module" src="rooms.js"></script>
+</body>
+</html>
+<!-- // ...existing code... -->
