@@ -149,12 +149,54 @@ audio { width:100%; }
   left:12px;
   bottom:12px;
   font-size:13px;
-  color:var(--muted);
+  color:#eef4f1;
   background: rgba(0,0,0,0.28);
   padding:8px 10px;
   border-radius:8px;
   z-index:10;
   user-select:none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Legend dot (matches 3-D hotspot appearance) */
+.legend-dot {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff 0%, transparent 42%), #6ee7b7;
+  box-shadow: 0 0 6px 3px rgba(110,231,183,0.55);
+  animation: legend-pulse 3.2s ease-in-out infinite;
+}
+
+@keyframes legend-pulse {
+  0%, 100% { transform: scale(1);    box-shadow: 0 0 5px 2px rgba(110,231,183,0.45); }
+  50%       { transform: scale(1.4); box-shadow: 0 0 10px 5px rgba(110,231,183,0.8); }
+}
+
+/* Click / tap icon shown below each hotspot dot */
+.hotspot-click-icon {
+  position: absolute;
+  transform: translate(-50%, 0);
+  font-size: 20px;
+  pointer-events: none;
+  color: #6ee7b7;
+  text-shadow: 0 0 8px rgba(110,231,183,0.9), 0 0 18px rgba(110,231,183,0.5);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  animation: click-tap 2.8s ease-in-out infinite;
+}
+.hotspot-click-icon.visible { opacity: 1; }
+
+@keyframes click-tap {
+  0%   { transform: translate(-50%, 0)   scale(1);    opacity: 0.7;  }
+  12%  { transform: translate(-50%, 2px) scale(0.78); opacity: 1;    }
+  24%  { transform: translate(-50%, 0)   scale(1.28); opacity: 0.85; }
+  36%  { transform: translate(-50%, 0)   scale(1);    opacity: 0.7;  }
+  100% { transform: translate(-50%, 0)   scale(1);    opacity: 0.7;  }
 }
 @media (max-width:640px) {
   .panel { width:96%; }

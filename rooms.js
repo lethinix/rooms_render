@@ -85,11 +85,21 @@ const ROOMS = [
     id: 'future',
     label: 'The Future Room',
     panorama: 'assets/pan_render_room3_1_0000_0001.png',
+    screen: {
+      src: 'assets/house_model.mov',
+      opacity: 0.5,
+      corners: [
+        { theta: -8.1, phi:  1.8 },   // top-left
+        { theta:  5.9, phi:  1.6 },   // top-right
+        { theta: -8.3, phi: -6.4 },   // bottom-left
+        { theta:  6.1, phi: -5.7 },   // bottom-right
+      ]
+    },
     hotspots: [
       {
         id: 'screen-left',
         title: 'Page 1',
-        theta: -2, phi: 0,   // ← use θ/φ HUD to position on screen
+        theta: -6.4, phi: 0.2,   // ← use θ/φ HUD to position on screen
         type: 'link',
         url: 'https://aishaa.net/projects/predictive_model/climate_projection_ssp245.html'
       },
@@ -199,13 +209,16 @@ function sphericalToVector(radius, thetaDeg, phiDeg) {
 }
 
 function makeDotTexture() {
-  const size = 64, c = document.createElement('canvas');
+  const size = 128, c = document.createElement('canvas');
   c.width = c.height = size;
   const ctx = c.getContext('2d');
-  const g = ctx.createRadialGradient(size * 0.5, size * 0.5, 2, size * 0.5, size * 0.5, size * 0.5);
+  const cx = size * 0.5, cy = size * 0.5;
+  const g = ctx.createRadialGradient(cx, cy, 2, cx, cy, size * 0.48);
   g.addColorStop(0,    'rgba(255,255,255,1)');
-  g.addColorStop(0.12, 'rgba(110,231,183,0.98)');
-  g.addColorStop(0.28, 'rgba(110,231,183,0.3)');
+  g.addColorStop(0.1,  'rgba(210,255,238,1)');
+  g.addColorStop(0.22, 'rgba(110,231,183,0.95)');
+  g.addColorStop(0.44, 'rgba(110,231,183,0.38)');
+  g.addColorStop(0.72, 'rgba(110,231,183,0.12)');
   g.addColorStop(1,    'rgba(110,231,183,0.0)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, size, size);
@@ -216,10 +229,68 @@ const dotTexture = makeDotTexture();
 let hotspotObjects  = [];
 let labelElements   = [];
 let currentHotspots = [];
+let screenMeshes    = [];
+
+function clearScreenMeshes() {
+  screenMeshes.forEach(m => {
+    scene.remove(m);
+    const vid = m.material.map?.image;
+    if (vid?.pause) { vid.pause(); vid.removeAttribute('src'); }
+    m.material.map?.dispose();
+    m.material.dispose();
+    m.geometry.dispose();
+  });
+  screenMeshes = [];
+}
+
+function buildScreenVideo({ src, corners, opacity = 0.5 }) {
+  const r = 495;
+  const [tl, tr, bl, br] = corners.map(c => sphericalToVector(r, c.theta, c.phi));
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([
+    tl.x, tl.y, tl.z,
+    tr.x, tr.y, tr.z,
+    bl.x, bl.y, bl.z,
+    br.x, br.y, br.z,
+  ]), 3));
+  geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array([
+    0, 1,   // TL
+    1, 1,   // TR
+    0, 0,   // BL
+    1, 0,   // BR
+  ]), 2));
+  geo.setIndex([0, 2, 1,  1, 2, 3]);
+
+  const vid = document.createElement('video');
+  vid.src = src;
+  vid.loop = true;
+  vid.muted = true;
+  vid.playsInline = true;
+  vid.autoplay = true;
+  vid.play().catch(() => {});
+
+  const tex = new THREE.VideoTexture(vid);
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+
+  const mat = new THREE.MeshBasicMaterial({
+    map: tex,
+    transparent: true,
+    opacity,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.renderOrder = 1;
+  scene.add(mesh);
+  screenMeshes.push(mesh);
+}
 
 function clearHotspots() {
   hotspotObjects.forEach(s => scene.remove(s));
-  labelElements.forEach(item => item.el.remove());
+  labelElements.forEach(item => { item.el.remove(); item.iconEl?.remove(); });
   hotspotObjects  = [];
   labelElements   = [];
   currentHotspots = [];
@@ -231,9 +302,10 @@ function buildHotspots(hotspots) {
     const pos = sphericalToVector(498, h.theta, h.phi);
     const mat = new THREE.SpriteMaterial({ map: dotTexture, transparent: true, depthTest: false });
     const sprite = new THREE.Sprite(mat);
-    sprite.scale.set(18, 18, 1);
+    sprite.scale.set(28, 28, 1);
     sprite.position.copy(pos);
     sprite.name = h.id;
+    sprite.renderOrder = 2;
     scene.add(sprite);
     hotspotObjects.push(sprite);
 
@@ -241,7 +313,13 @@ function buildHotspots(hotspots) {
     label.className = 'hotspot-label';
     label.innerHTML = `<div style="font-weight:600">${h.title.split('—')[0].trim()}</div><div class="muted">${h.title.split('—')[1]?.trim() || ''}</div>`;
     container.appendChild(label);
-    labelElements.push({ el: label, data: h, obj: sprite });
+
+    const iconEl = document.createElement('div');
+    iconEl.className = 'hotspot-click-icon';
+    iconEl.textContent = '☝';
+    container.appendChild(iconEl);
+
+    labelElements.push({ el: label, iconEl, data: h, obj: sprite });
   });
 }
 
@@ -297,10 +375,15 @@ renderer.domElement.addEventListener('touchmove', (e) => {
 function updateLabels() {
   labelElements.forEach(item => {
     const vec = item.obj.position.clone().project(camera);
-    item.el.style.left = `${(vec.x *  0.5 + 0.5) * renderer.domElement.clientWidth}px`;
-    item.el.style.top  = `${(vec.y * -0.5 + 0.5) * renderer.domElement.clientHeight}px`;
+    const sx = (vec.x *  0.5 + 0.5) * renderer.domElement.clientWidth;
+    const sy = (vec.y * -0.5 + 0.5) * renderer.domElement.clientHeight;
+    item.el.style.left    = `${sx}px`;
+    item.el.style.top     = `${sy}px`;
+    item.iconEl.style.left = `${sx}px`;
+    item.iconEl.style.top  = `${sy + 20}px`;
     const onScreen = vec.z < 1 && vec.z > -1 && Math.abs(vec.x) < 1.2 && Math.abs(vec.y) < 1.2;
     item.el.classList.toggle('visible', onScreen && hoveredHotspotId === item.data.id);
+    item.iconEl.classList.toggle('visible', onScreen);
   });
 }
 
@@ -349,6 +432,8 @@ window.addEventListener('resize', () => {
 function animate() {
   requestAnimationFrame(animate);
   controls.update();
+  const pulse = 32 + 22 * Math.abs(Math.sin(Date.now() * 0.002));
+  hotspotObjects.forEach(s => s.scale.set(pulse, pulse, 1));
   updateLabels();
   renderer.render(scene, camera);
 }
@@ -389,8 +474,10 @@ function switchRoom(idx) {
   navBar.querySelectorAll('.room-btn').forEach((btn, i) => btn.classList.toggle('active', i === idx));
   closePanel();
   clearHotspots();
+  clearScreenMeshes();
   loadPanorama(room.panorama);
   buildHotspots(room.hotspots);
+  if (room.screen) buildScreenVideo(room.screen);
   setInitialViewToHotspots({ animated: true });
 }
 
