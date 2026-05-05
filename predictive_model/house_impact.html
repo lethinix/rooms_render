@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>2110 — House Impact Visualization</title>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.158.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.158.0/examples/jsm/"
+  }
+}
+</script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background:#070707; color:#fff;
+    font-family:'Georgia',serif;
+    height:100vh; display:flex; flex-direction:column; overflow:hidden;
+  }
+  #header {
+    padding:12px 28px; display:flex;
+    justify-content:space-between; align-items:center;
+    border-bottom:1px solid #161616; flex-shrink:0;
+  }
+  #header h1 { font-size:0.68rem; letter-spacing:0.22em; color:#444; font-weight:normal; }
+  #year-display { font-size:3.4rem; font-weight:200; letter-spacing:0.06em; color:#fff; line-height:1; }
+  #main { display:flex; flex:1; overflow:hidden; }
+  #canvas-container { flex:1; position:relative; }
+  canvas { display:block; width:100%!important; height:100%!important; }
+
+  /* ── sidebar ── */
+  #sidebar {
+    width:280px; padding:18px 16px;
+    border-left:1px solid #161616;
+    display:flex; flex-direction:column; gap:12px;
+    overflow-y:auto;
+  }
+  .card {
+    background:#0e0e0e; border:1px solid #1c1c1c;
+    border-radius:3px; padding:14px;
+  }
+  .card-label {
+    font-size:0.58rem; letter-spacing:0.22em;
+    color:#444; text-transform:uppercase; margin-bottom:8px;
+  }
+  .card-value { font-size:2rem; font-weight:200; color:#eee; line-height:1; }
+  .card-unit  { font-size:0.75rem; color:#444; margin-left:3px; }
+  .card-sub   { font-size:0.65rem; color:#383838; margin-top:5px; }
+
+  /* damage bars */
+  .bar-row { margin-bottom:9px; }
+  .bar-header {
+    display:flex; justify-content:space-between;
+    font-size:0.62rem; color:#444; margin-bottom:4px;
+  }
+  .bar-track {
+    height:5px; background:#191919; border-radius:2px; overflow:hidden;
+  }
+  .bar-fill {
+    height:100%; border-radius:2px;
+    transition: width 0.4s ease, background-color 0.6s ease;
+  }
+
+  /* legend */
+  .legend { display:flex; flex-direction:column; gap:6px; margin-top:4px; }
+  .legend-item { display:flex; align-items:center; gap:8px; font-size:0.6rem; color:#444; }
+  .legend-swatch { width:10px; height:10px; border-radius:1px; flex-shrink:0; }
+
+  /* controls */
+  #controls {
+    padding:14px 28px; border-top:1px solid #161616;
+    display:flex; align-items:center; gap:18px; flex-shrink:0;
+  }
+  #play-btn {
+    background:none; border:1px solid #2a2a2a; color:#888;
+    padding:7px 18px; cursor:pointer;
+    font-size:0.65rem; letter-spacing:0.18em;
+    border-radius:2px; font-family:inherit;
+    transition:border-color 0.2s,color 0.2s; flex-shrink:0;
+  }
+  #play-btn:hover { border-color:#555; color:#ccc; }
+  #year-slider {
+    flex:1; -webkit-appearance:none; height:2px;
+    background:#1e1e1e; outline:none; cursor:pointer; border-radius:1px;
+  }
+  #year-slider::-webkit-slider-thumb {
+    -webkit-appearance:none; width:14px; height:14px;
+    border-radius:50%; background:#fff; cursor:pointer;
+    box-shadow:0 0 6px rgba(255,255,255,0.2);
+  }
+  #slider-label { font-size:0.62rem; color:#333; min-width:70px; text-align:right; }
+
+  /* tooltip */
+  #tooltip {
+    position:fixed; background:rgba(5,5,5,0.95);
+    border:1px solid #2a2a2a; padding:10px 14px;
+    font-size:0.7rem; pointer-events:none;
+    display:none; z-index:200; line-height:1.8; color:#bbb;
+    border-radius:2px;
+  }
+  #source { font-size:0.5rem; color:#252525; line-height:1.7; }
+
+  /* scenario badge */
+  #scenario-badge {
+    position:absolute; top:14px; left:14px;
+    font-size:0.55rem; letter-spacing:0.18em;
+    color:#2a2a2a; pointer-events:none;
+  }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>2110 BLUE LAWN ROAD &nbsp;·&nbsp; IOWA CITY, IA &nbsp;·&nbsp; CLIMATE IMPACT &nbsp;·&nbsp; NO RETROFITS</h1>
+  <div id="year-display">1980</div>
+</div>
+
+<div id="main">
+  <div id="canvas-container">
+    <div id="scenario-badge">SCENARIO: SSP2-4.5 &nbsp;|&nbsp; "MIDDLE OF THE ROAD"</div>
+  </div>
+
+  <div id="sidebar">
+
+    <div class="card">
+      <div class="card-label">Annual Mean Temperature</div>
+      <div class="card-value" id="stat-temp">—<span class="card-unit">°F</span></div>
+      <div class="card-sub" id="stat-temp-delta"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Material Degradation (cumulative, no repairs)</div>
+      <div class="bar-row">
+        <div class="bar-header">
+          <span>Exterior pine siding</span><span id="wood-pct">0%</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill" id="wood-bar" style="width:0%"></div></div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-header">
+          <span>Roof (asphalt shingle)</span><span id="roof-pct">0%</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill" id="roof-bar" style="width:0%"></div></div>
+      </div>
+      <div class="bar-row" style="margin-bottom:0">
+        <div class="bar-header">
+          <span>Foundation (concrete)</span><span id="found-pct">0%</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill" id="found-bar" style="width:0%"></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Est. Annual Energy Cost</div>
+      <div class="card-value" id="stat-energy">$—</div>
+      <div class="card-sub" id="stat-energy-delta"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Thunderstorm Days / Year</div>
+      <div class="card-value" id="stat-storms">—</div>
+      <div class="card-sub">Baseline: 42 days (1991–2020, NOAA NCEI)</div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Hottest Day of Year</div>
+      <div class="card-value" id="stat-hot">—<span class="card-unit">°F</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Max Single-Day Rainfall</div>
+      <div class="card-value" id="stat-rain">—<span class="card-unit">in</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Heat map key</div>
+      <div class="legend">
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:#4ade80"></div>Low stress / good condition
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:#facc15"></div>Moderate degradation
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:#f97316"></div>Significant damage
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:#dc2626"></div>Critical / end of life
+        </div>
+      </div>
+    </div>
+
+    <div id="source">
+      ERA5 / ECMWF (1980–2024) · CMIP6 HighResMIP ensemble (2025–2050) ·
+      IPCC AR6 SSP2-4.5 delta scaling (2050–2110) · NOAA NCEI storm baseline ·
+      USDA Forest Products Laboratory wood degradation model ·
+      EIA Iowa residential energy cost data
+    </div>
+
+  </div>
+</div>
+
+<div id="controls">
+  <button id="play-btn">▶ PLAY</button>
+  <input type="range" id="year-slider" min="0" max="130" value="0" step="1">
+  <div id="slider-label">1980 → 2110</div>
+</div>
+
+<div id="tooltip"></div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ═══════════════════════════════════════════════════════════════════════
+//  CLIMATE DATA  — projection_ssp245_iowa_city.csv
+//  Source: ERA5 / CMIP6 / IPCC AR6 SSP2-4.5 (see climate_projection.py)
+// ═══════════════════════════════════════════════════════════════════════
+const RAW = [{"year":1980,"temp_mean":49.25,"temp_max_extreme":97.0,"temp_min_extreme":-13.1,"precip_annual":39.79,"precip_max_event":2.32,"wind_max_mean":12.62,"severe_days_projected":39.11},{"year":1981,"temp_mean":50.24,"temp_max_extreme":94.1,"temp_min_extreme":-20.6,"precip_annual":38.26,"precip_max_event":2.44,"wind_max_mean":12.86,"severe_days_projected":39.19},{"year":1982,"temp_mean":47.8,"temp_max_extreme":91.4,"temp_min_extreme":-29.2,"precip_annual":51.51,"precip_max_event":3.95,"wind_max_mean":13.1,"severe_days_projected":39.27},{"year":1983,"temp_mean":50.09,"temp_max_extreme":98.2,"temp_min_extreme":-25.6,"precip_annual":33.35,"precip_max_event":1.44,"wind_max_mean":12.7,"severe_days_projected":39.35},{"year":1984,"temp_mean":49.37,"temp_max_extreme":95.6,"temp_min_extreme":-21.7,"precip_annual":42.69,"precip_max_event":2.19,"wind_max_mean":13.1,"severe_days_projected":39.43},{"year":1985,"temp_mean":47.57,"temp_max_extreme":95.9,"temp_min_extreme":-26.6,"precip_annual":40.38,"precip_max_event":1.44,"wind_max_mean":13.73,"severe_days_projected":39.51},{"year":1986,"temp_mean":50.19,"temp_max_extreme":90.6,"temp_min_extreme":-14.6,"precip_annual":44.71,"precip_max_event":3.32,"wind_max_mean":12.8,"severe_days_projected":39.6},{"year":1987,"temp_mean":52.76,"temp_max_extreme":98.9,"temp_min_extreme":-2.3,"precip_annual":36.19,"precip_max_event":1.87,"wind_max_mean":12.41,"severe_days_projected":39.68},{"year":1988,"temp_mean":50.55,"temp_max_extreme":102.2,"temp_min_extreme":-21.8,"precip_annual":27.18,"precip_max_event":3.6,"wind_max_mean":13.43,"severe_days_projected":39.76},{"year":1989,"temp_mean":48.5,"temp_max_extreme":96.5,"temp_min_extreme":-18.1,"precip_annual":31.56,"precip_max_event":2.15,"wind_max_mean":12.43,"severe_days_projected":39.85},{"year":1990,"temp_mean":51.09,"temp_max_extreme":93.3,"temp_min_extreme":-18.5,"precip_annual":43.61,"precip_max_event":1.41,"wind_max_mean":13.43,"severe_days_projected":39.93},{"year":1991,"temp_mean":51.07,"temp_max_extreme":95.4,"temp_min_extreme":-13.9,"precip_annual":41.8,"precip_max_event":2.53,"wind_max_mean":12.86,"severe_days_projected":40.01},{"year":1992,"temp_mean":49.74,"temp_max_extreme":89.7,"temp_min_extreme":-9.1,"precip_annual":39.43,"precip_max_event":1.91,"wind_max_mean":12.38,"severe_days_projected":40.1},{"year":1993,"temp_mean":48.34,"temp_max_extreme":89.9,"temp_min_extreme":-15.7,"precip_annual":56.07,"precip_max_event":2.5,"wind_max_mean":12.83,"severe_days_projected":40.18},{"year":1994,"temp_mean":49.25,"temp_max_extreme":91.6,"temp_min_extreme":-30.2,"precip_annual":33.0,"precip_max_event":1.63,"wind_max_mean":12.67,"severe_days_projected":40.27},{"year":1995,"temp_mean":49.69,"temp_max_extreme":96.8,"temp_min_extreme":-7.4,"precip_annual":36.53,"precip_max_event":1.74,"wind_max_mean":12.77,"severe_days_projected":40.35},{"year":1996,"temp_mean":47.38,"temp_max_extreme":91.0,"temp_min_extreme":-33.9,"precip_annual":37.23,"precip_max_event":2.72,"wind_max_mean":13.13,"severe_days_projected":40.56},{"year":1997,"temp_mean":48.58,"temp_max_extreme":93.6,"temp_min_extreme":-17.7,"precip_annual":38.22,"precip_max_event":1.76,"wind_max_mean":12.7,"severe_days_projected":40.76},{"year":1998,"temp_mean":52.66,"temp_max_extreme":92.5,"temp_min_extreme":-13.0,"precip_annual":47.8,"precip_max_event":3.37,"wind_max_mean":11.99,"severe_days_projected":40.97},{"year":1999,"temp_mean":51.41,"temp_max_extreme":99.2,"temp_min_extreme":-27.6,"precip_annual":30.33,"precip_max_event":1.15,"wind_max_mean":12.93,"severe_days_projected":41.18},{"year":2000,"temp_mean":50.3,"temp_max_extreme":94.5,"temp_min_extreme":-18.9,"precip_annual":35.45,"precip_max_event":1.72,"wind_max_mean":13.19,"severe_days_projected":41.39},{"year":2001,"temp_mean":50.65,"temp_max_extreme":92.2,"temp_min_extreme":-12.1,"precip_annual":41.34,"precip_max_event":1.84,"wind_max_mean":12.82,"severe_days_projected":41.6},{"year":2002,"temp_mean":50.96,"temp_max_extreme":92.6,"temp_min_extreme":-14.3,"precip_annual":34.57,"precip_max_event":1.49,"wind_max_mean":12.67,"severe_days_projected":41.81},{"year":2003,"temp_mean":49.74,"temp_max_extreme":97.5,"temp_min_extreme":-5.2,"precip_annual":29.86,"precip_max_event":1.72,"wind_max_mean":12.61,"severe_days_projected":42.02},{"year":2004,"temp_mean":50.28,"temp_max_extreme":88.7,"temp_min_extreme":-16.2,"precip_annual":39.4,"precip_max_event":2.01,"wind_max_mean":13.02,"severe_days_projected":42.23},{"year":2005,"temp_mean":51.63,"temp_max_extreme":97.8,"temp_min_extreme":-18.6,"precip_annual":23.26,"precip_max_event":0.96,"wind_max_mean":12.22,"severe_days_projected":42.44},{"year":2006,"temp_mean":52.78,"temp_max_extreme":99.3,"temp_min_extreme":-9.5,"precip_annual":30.35,"precip_max_event":0.97,"wind_max_mean":12.95,"severe_days_projected":42.66},{"year":2007,"temp_mean":51.2,"temp_max_extreme":94.4,"temp_min_extreme":-21.3,"precip_annual":36.08,"precip_max_event":2.47,"wind_max_mean":13.19,"severe_days_projected":42.87},{"year":2008,"temp_mean":47.6,"temp_max_extreme":91.9,"temp_min_extreme":-19.6,"precip_annual":46.4,"precip_max_event":2.28,"wind_max_mean":13.37,"severe_days_projected":43.09},{"year":2009,"temp_mean":48.46,"temp_max_extreme":90.7,"temp_min_extreme":-32.4,"precip_annual":51.03,"precip_max_event":2.5,"wind_max_mean":12.7,"severe_days_projected":43.3},{"year":2010,"temp_mean":50.45,"temp_max_extreme":91.4,"temp_min_extreme":-20.2,"precip_annual":46.77,"precip_max_event":1.81,"wind_max_mean":12.54,"severe_days_projected":43.52},{"year":2011,"temp_mean":51.03,"temp_max_extreme":96.4,"temp_min_extreme":-20.6,"precip_annual":34.46,"precip_max_event":1.96,"wind_max_mean":13.14,"severe_days_projected":43.74},{"year":2012,"temp_mean":54.47,"temp_max_extreme":101.0,"temp_min_extreme":-6.0,"precip_annual":23.92,"precip_max_event":1.02,"wind_max_mean":13.09,"severe_days_projected":43.96},{"year":2013,"temp_mean":48.98,"temp_max_extreme":97.6,"temp_min_extreme":-18.3,"precip_annual":40.68,"precip_max_event":1.91,"wind_max_mean":13.29,"severe_days_projected":44.17},{"year":2014,"temp_mean":46.97,"temp_max_extreme":90.7,"temp_min_extreme":-20.6,"precip_annual":38.18,"precip_max_event":2.08,"wind_max_mean":13.68,"severe_days_projected":44.39},{"year":2015,"temp_mean":50.77,"temp_max_extreme":91.0,"temp_min_extreme":-19.3,"precip_annual":49.91,"precip_max_event":2.07,"wind_max_mean":13.11,"severe_days_projected":44.61},{"year":2016,"temp_mean":52.9,"temp_max_extreme":93.0,"temp_min_extreme":-14.6,"precip_annual":35.75,"precip_max_event":2.08,"wind_max_mean":13.19,"severe_days_projected":44.84},{"year":2017,"temp_mean":52.72,"temp_max_extreme":97.0,"temp_min_extreme":-13.7,"precip_annual":28.5,"precip_max_event":1.61,"wind_max_mean":13.76,"severe_days_projected":45.06},{"year":2018,"temp_mean":49.89,"temp_max_extreme":95.0,"temp_min_extreme":-18.0,"precip_annual":44.7,"precip_max_event":1.87,"wind_max_mean":12.95,"severe_days_projected":45.28},{"year":2019,"temp_mean":49.09,"temp_max_extreme":95.6,"temp_min_extreme":-32.0,"precip_annual":45.15,"precip_max_event":2.07,"wind_max_mean":13.63,"severe_days_projected":45.5},{"year":2020,"temp_mean":51.09,"temp_max_extreme":94.1,"temp_min_extreme":-7.2,"precip_annual":35.16,"precip_max_event":1.63,"wind_max_mean":13.36,"severe_days_projected":45.73},{"year":2021,"temp_mean":51.71,"temp_max_extreme":94.2,"temp_min_extreme":-14.1,"precip_annual":33.8,"precip_max_event":1.6,"wind_max_mean":13.4,"severe_days_projected":45.95},{"year":2022,"temp_mean":49.58,"temp_max_extreme":94.9,"temp_min_extreme":-16.4,"precip_annual":35.78,"precip_max_event":1.86,"wind_max_mean":14.18,"severe_days_projected":46.18},{"year":2023,"temp_mean":53.1,"temp_max_extreme":97.7,"temp_min_extreme":-6.4,"precip_annual":28.09,"precip_max_event":1.2,"wind_max_mean":13.04,"severe_days_projected":46.41},{"year":2024,"temp_mean":53.07,"temp_max_extreme":94.0,"temp_min_extreme":-22.5,"precip_annual":41.57,"precip_max_event":2.32,"wind_max_mean":13.32,"severe_days_projected":46.63},{"year":2025,"temp_mean":51.55,"temp_max_extreme":92.85,"temp_min_extreme":-1.05,"precip_annual":40.71,"precip_max_event":1.63,"wind_max_mean":13.31,"severe_days_projected":42.99},{"year":2026,"temp_mean":53.63,"temp_max_extreme":99.05,"temp_min_extreme":-1.4,"precip_annual":37.9,"precip_max_event":3.31,"wind_max_mean":13.11,"severe_days_projected":43.09},{"year":2027,"temp_mean":53.72,"temp_max_extreme":102.4,"temp_min_extreme":-7.05,"precip_annual":39.66,"precip_max_event":2.11,"wind_max_mean":13.12,"severe_days_projected":43.18},{"year":2028,"temp_mean":53.22,"temp_max_extreme":98.05,"temp_min_extreme":0.35,"precip_annual":40.51,"precip_max_event":0.93,"wind_max_mean":12.65,"severe_days_projected":43.27},{"year":2029,"temp_mean":51.93,"temp_max_extreme":100.55,"temp_min_extreme":-7.95,"precip_annual":34.02,"precip_max_event":1.4,"wind_max_mean":13.16,"severe_days_projected":43.36},{"year":2030,"temp_mean":55.27,"temp_max_extreme":104.25,"temp_min_extreme":-5.5,"precip_annual":30.14,"precip_max_event":2.78,"wind_max_mean":13.49,"severe_days_projected":43.45},{"year":2031,"temp_mean":53.62,"temp_max_extreme":109.9,"temp_min_extreme":0.15,"precip_annual":31.18,"precip_max_event":1.48,"wind_max_mean":13.69,"severe_days_projected":43.55},{"year":2032,"temp_mean":51.82,"temp_max_extreme":96.0,"temp_min_extreme":-3.45,"precip_annual":44.88,"precip_max_event":1.54,"wind_max_mean":13.62,"severe_days_projected":43.64},{"year":2033,"temp_mean":54.92,"temp_max_extreme":107.4,"temp_min_extreme":-1.1,"precip_annual":32.1,"precip_max_event":2.28,"wind_max_mean":12.96,"severe_days_projected":43.73},{"year":2034,"temp_mean":53.46,"temp_max_extreme":95.75,"temp_min_extreme":7.55,"precip_annual":45.37,"precip_max_event":3.11,"wind_max_mean":12.37,"severe_days_projected":43.83},{"year":2035,"temp_mean":53.92,"temp_max_extreme":103.25,"temp_min_extreme":-3.15,"precip_annual":33.74,"precip_max_event":2.17,"wind_max_mean":13.64,"severe_days_projected":43.92},{"year":2036,"temp_mean":52.75,"temp_max_extreme":97.1,"temp_min_extreme":0.4,"precip_annual":47.49,"precip_max_event":2.32,"wind_max_mean":13.65,"severe_days_projected":44.02},{"year":2037,"temp_mean":54.96,"temp_max_extreme":105.7,"temp_min_extreme":3.8,"precip_annual":47.14,"precip_max_event":2.03,"wind_max_mean":13.2,"severe_days_projected":44.11},{"year":2038,"temp_mean":54.01,"temp_max_extreme":100.35,"temp_min_extreme":10.2,"precip_annual":30.6,"precip_max_event":1.18,"wind_max_mean":13.2,"severe_days_projected":44.21},{"year":2039,"temp_mean":53.53,"temp_max_extreme":96.55,"temp_min_extreme":4.75,"precip_annual":40.69,"precip_max_event":1.65,"wind_max_mean":12.5,"severe_days_projected":44.3},{"year":2040,"temp_mean":54.11,"temp_max_extreme":100.45,"temp_min_extreme":-2.8,"precip_annual":38.01,"precip_max_event":1.29,"wind_max_mean":13.14,"severe_days_projected":44.4},{"year":2041,"temp_mean":54.31,"temp_max_extreme":105.4,"temp_min_extreme":-1.5,"precip_annual":32.18,"precip_max_event":0.97,"wind_max_mean":13.59,"severe_days_projected":44.49},{"year":2042,"temp_mean":54.84,"temp_max_extreme":105.65,"temp_min_extreme":-0.7,"precip_annual":35.01,"precip_max_event":2.31,"wind_max_mean":13.45,"severe_days_projected":44.59},{"year":2043,"temp_mean":52.9,"temp_max_extreme":100.15,"temp_min_extreme":0.1,"precip_annual":37.8,"precip_max_event":1.32,"wind_max_mean":13.18,"severe_days_projected":44.68},{"year":2044,"temp_mean":52.94,"temp_max_extreme":99.85,"temp_min_extreme":-6.45,"precip_annual":33.08,"precip_max_event":1.86,"wind_max_mean":13.23,"severe_days_projected":44.78},{"year":2045,"temp_mean":54.23,"temp_max_extreme":99.45,"temp_min_extreme":0.75,"precip_annual":35.02,"precip_max_event":1.42,"wind_max_mean":13.57,"severe_days_projected":44.87},{"year":2046,"temp_mean":55.23,"temp_max_extreme":105.8,"temp_min_extreme":4.9,"precip_annual":30.22,"precip_max_event":1.8,"wind_max_mean":13.17,"severe_days_projected":44.97},{"year":2047,"temp_mean":53.57,"temp_max_extreme":100.95,"temp_min_extreme":-5.45,"precip_annual":36.49,"precip_max_event":3.23,"wind_max_mean":13.59,"severe_days_projected":45.07},{"year":2048,"temp_mean":55.27,"temp_max_extreme":98.6,"temp_min_extreme":6.3,"precip_annual":40.01,"precip_max_event":1.52,"wind_max_mean":13.22,"severe_days_projected":45.17},{"year":2049,"temp_mean":57.22,"temp_max_extreme":108.15,"temp_min_extreme":1.8,"precip_annual":28.75,"precip_max_event":1.68,"wind_max_mean":13.24,"severe_days_projected":45.26},{"year":2050,"temp_mean":55.72,"temp_max_extreme":99.95,"temp_min_extreme":7.95,"precip_annual":37.45,"precip_max_event":2.13,"wind_max_mean":12.53,"severe_days_projected":45.36},{"year":2051,"temp_mean":53.03,"temp_max_extreme":97.68,"temp_min_extreme":-15.31,"precip_annual":38.99,"precip_max_event":2.02,"wind_max_mean":12.9,"severe_days_projected":45.46},{"year":2052,"temp_mean":53.1,"temp_max_extreme":97.76,"temp_min_extreme":-15.26,"precip_annual":39.02,"precip_max_event":2.02,"wind_max_mean":12.9,"severe_days_projected":45.56},{"year":2053,"temp_mean":53.16,"temp_max_extreme":97.83,"temp_min_extreme":-15.2,"precip_annual":39.06,"precip_max_event":2.03,"wind_max_mean":12.9,"severe_days_projected":45.65},{"year":2054,"temp_mean":53.22,"temp_max_extreme":97.89,"temp_min_extreme":-15.15,"precip_annual":39.09,"precip_max_event":2.03,"wind_max_mean":12.9,"severe_days_projected":45.75},{"year":2055,"temp_mean":53.28,"temp_max_extreme":97.96,"temp_min_extreme":-15.11,"precip_annual":39.13,"precip_max_event":2.03,"wind_max_mean":12.9,"severe_days_projected":45.85},{"year":2056,"temp_mean":53.33,"temp_max_extreme":98.02,"temp_min_extreme":-15.06,"precip_annual":39.16,"precip_max_event":2.03,"wind_max_mean":12.9,"severe_days_projected":45.95},{"year":2057,"temp_mean":53.37,"temp_max_extreme":98.07,"temp_min_extreme":-15.02,"precip_annual":39.19,"precip_max_event":2.04,"wind_max_mean":12.9,"severe_days_projected":46.05},{"year":2058,"temp_mean":53.42,"temp_max_extreme":98.12,"temp_min_extreme":-14.99,"precip_annual":39.23,"precip_max_event":2.04,"wind_max_mean":12.9,"severe_days_projected":46.15},{"year":2059,"temp_mean":53.46,"temp_max_extreme":98.17,"temp_min_extreme":-14.95,"precip_annual":39.26,"precip_max_event":2.04,"wind_max_mean":12.9,"severe_days_projected":46.25},{"year":2060,"temp_mean":53.49,"temp_max_extreme":98.21,"temp_min_extreme":-14.92,"precip_annual":39.29,"precip_max_event":2.04,"wind_max_mean":12.9,"severe_days_projected":46.35},{"year":2061,"temp_mean":53.53,"temp_max_extreme":98.25,"temp_min_extreme":-14.89,"precip_annual":39.32,"precip_max_event":2.05,"wind_max_mean":12.9,"severe_days_projected":46.45},{"year":2062,"temp_mean":53.56,"temp_max_extreme":98.29,"temp_min_extreme":-14.86,"precip_annual":39.35,"precip_max_event":2.05,"wind_max_mean":12.9,"severe_days_projected":46.55},{"year":2063,"temp_mean":53.59,"temp_max_extreme":98.32,"temp_min_extreme":-14.84,"precip_annual":39.38,"precip_max_event":2.05,"wind_max_mean":12.9,"severe_days_projected":46.65},{"year":2064,"temp_mean":53.62,"temp_max_extreme":98.35,"temp_min_extreme":-14.81,"precip_annual":39.41,"precip_max_event":2.05,"wind_max_mean":12.9,"severe_days_projected":46.75},{"year":2065,"temp_mean":53.65,"temp_max_extreme":98.38,"temp_min_extreme":-14.79,"precip_annual":39.44,"precip_max_event":2.05,"wind_max_mean":12.9,"severe_days_projected":46.85},{"year":2066,"temp_mean":53.67,"temp_max_extreme":98.41,"temp_min_extreme":-14.77,"precip_annual":39.46,"precip_max_event":2.06,"wind_max_mean":12.9,"severe_days_projected":46.95},{"year":2067,"temp_mean":53.69,"temp_max_extreme":98.44,"temp_min_extreme":-14.75,"precip_annual":39.49,"precip_max_event":2.06,"wind_max_mean":12.9,"severe_days_projected":47.06},{"year":2068,"temp_mean":53.72,"temp_max_extreme":98.46,"temp_min_extreme":-14.73,"precip_annual":39.52,"precip_max_event":2.06,"wind_max_mean":12.9,"severe_days_projected":47.16},{"year":2069,"temp_mean":53.74,"temp_max_extreme":98.49,"temp_min_extreme":-14.71,"precip_annual":39.54,"precip_max_event":2.06,"wind_max_mean":12.9,"severe_days_projected":47.26},{"year":2070,"temp_mean":53.76,"temp_max_extreme":98.51,"temp_min_extreme":-14.7,"precip_annual":39.57,"precip_max_event":2.07,"wind_max_mean":12.9,"severe_days_projected":47.36},{"year":2071,"temp_mean":53.78,"temp_max_extreme":98.54,"temp_min_extreme":-14.68,"precip_annual":39.59,"precip_max_event":2.07,"wind_max_mean":12.9,"severe_days_projected":47.47},{"year":2072,"temp_mean":53.8,"temp_max_extreme":98.56,"temp_min_extreme":-14.66,"precip_annual":39.62,"precip_max_event":2.07,"wind_max_mean":12.9,"severe_days_projected":47.57},{"year":2073,"temp_mean":53.82,"temp_max_extreme":98.58,"temp_min_extreme":-14.65,"precip_annual":39.64,"precip_max_event":2.07,"wind_max_mean":12.9,"severe_days_projected":47.67},{"year":2074,"temp_mean":53.84,"temp_max_extreme":98.61,"temp_min_extreme":-14.63,"precip_annual":39.67,"precip_max_event":2.07,"wind_max_mean":12.9,"severe_days_projected":47.78},{"year":2075,"temp_mean":53.86,"temp_max_extreme":98.63,"temp_min_extreme":-14.61,"precip_annual":39.69,"precip_max_event":2.07,"wind_max_mean":12.9,"severe_days_projected":47.88},{"year":2076,"temp_mean":53.88,"temp_max_extreme":98.65,"temp_min_extreme":-14.59,"precip_annual":39.71,"precip_max_event":2.08,"wind_max_mean":12.9,"severe_days_projected":47.98},{"year":2077,"temp_mean":53.9,"temp_max_extreme":98.68,"temp_min_extreme":-14.57,"precip_annual":39.73,"precip_max_event":2.08,"wind_max_mean":12.9,"severe_days_projected":48.09},{"year":2078,"temp_mean":53.93,"temp_max_extreme":98.71,"temp_min_extreme":-14.55,"precip_annual":39.76,"precip_max_event":2.08,"wind_max_mean":12.9,"severe_days_projected":48.19},{"year":2079,"temp_mean":53.95,"temp_max_extreme":98.73,"temp_min_extreme":-14.53,"precip_annual":39.78,"precip_max_event":2.08,"wind_max_mean":12.9,"severe_days_projected":48.3},{"year":2080,"temp_mean":53.98,"temp_max_extreme":98.76,"temp_min_extreme":-14.51,"precip_annual":39.8,"precip_max_event":2.08,"wind_max_mean":12.9,"severe_days_projected":48.4},{"year":2081,"temp_mean":54.0,"temp_max_extreme":98.79,"temp_min_extreme":-14.49,"precip_annual":39.82,"precip_max_event":2.08,"wind_max_mean":12.9,"severe_days_projected":48.51},{"year":2082,"temp_mean":54.03,"temp_max_extreme":98.82,"temp_min_extreme":-14.47,"precip_annual":39.84,"precip_max_event":2.09,"wind_max_mean":12.9,"severe_days_projected":48.61},{"year":2083,"temp_mean":54.05,"temp_max_extreme":98.85,"temp_min_extreme":-14.45,"precip_annual":39.86,"precip_max_event":2.09,"wind_max_mean":12.9,"severe_days_projected":48.71},{"year":2084,"temp_mean":54.08,"temp_max_extreme":98.88,"temp_min_extreme":-14.42,"precip_annual":39.87,"precip_max_event":2.09,"wind_max_mean":12.9,"severe_days_projected":48.82},{"year":2085,"temp_mean":54.11,"temp_max_extreme":98.91,"temp_min_extreme":-14.4,"precip_annual":39.89,"precip_max_event":2.09,"wind_max_mean":12.9,"severe_days_projected":48.92},{"year":2086,"temp_mean":54.14,"temp_max_extreme":98.95,"temp_min_extreme":-14.38,"precip_annual":39.91,"precip_max_event":2.09,"wind_max_mean":12.9,"severe_days_projected":49.03},{"year":2087,"temp_mean":54.16,"temp_max_extreme":98.98,"temp_min_extreme":-14.35,"precip_annual":39.92,"precip_max_event":2.09,"wind_max_mean":12.9,"severe_days_projected":49.13},{"year":2088,"temp_mean":54.19,"temp_max_extreme":99.01,"temp_min_extreme":-14.33,"precip_annual":39.94,"precip_max_event":2.09,"wind_max_mean":12.9,"severe_days_projected":49.23},{"year":2089,"temp_mean":54.22,"temp_max_extreme":99.05,"temp_min_extreme":-14.3,"precip_annual":39.95,"precip_max_event":2.1,"wind_max_mean":12.9,"severe_days_projected":49.33},{"year":2090,"temp_mean":54.25,"temp_max_extreme":99.08,"temp_min_extreme":-14.28,"precip_annual":39.97,"precip_max_event":2.1,"wind_max_mean":12.9,"severe_days_projected":49.43},{"year":2091,"temp_mean":54.28,"temp_max_extreme":99.12,"temp_min_extreme":-14.25,"precip_annual":39.98,"precip_max_event":2.1,"wind_max_mean":12.9,"severe_days_projected":49.53},{"year":2092,"temp_mean":54.32,"temp_max_extreme":99.15,"temp_min_extreme":-14.22,"precip_annual":39.99,"precip_max_event":2.1,"wind_max_mean":12.9,"severe_days_projected":49.63},{"year":2093,"temp_mean":54.35,"temp_max_extreme":99.19,"temp_min_extreme":-14.2,"precip_annual":40.0,"precip_max_event":2.1,"wind_max_mean":12.9,"severe_days_projected":49.73},{"year":2094,"temp_mean":54.38,"temp_max_extreme":99.23,"temp_min_extreme":-14.17,"precip_annual":40.01,"precip_max_event":2.1,"wind_max_mean":12.9,"severe_days_projected":49.83},{"year":2095,"temp_mean":54.41,"temp_max_extreme":99.26,"temp_min_extreme":-14.14,"precip_annual":40.02,"precip_max_event":2.1,"wind_max_mean":12.9,"severe_days_projected":49.93},{"year":2096,"temp_mean":54.44,"temp_max_extreme":99.3,"temp_min_extreme":-14.11,"precip_annual":40.03,"precip_max_event":2.1,"wind_max_mean":12.9,"severe_days_projected":50.03},{"year":2097,"temp_mean":54.48,"temp_max_extreme":99.34,"temp_min_extreme":-14.08,"precip_annual":40.04,"precip_max_event":2.1,"wind_max_mean":12.9,"severe_days_projected":50.12},{"year":2098,"temp_mean":54.51,"temp_max_extreme":99.38,"temp_min_extreme":-14.06,"precip_annual":40.05,"precip_max_event":2.1,"wind_max_mean":12.9,"severe_days_projected":50.21},{"year":2099,"temp_mean":54.55,"temp_max_extreme":99.42,"temp_min_extreme":-14.03,"precip_annual":40.06,"precip_max_event":2.1,"wind_max_mean":12.9,"severe_days_projected":50.31},{"year":2100,"temp_mean":54.58,"temp_max_extreme":99.46,"temp_min_extreme":-14.0,"precip_annual":40.06,"precip_max_event":2.1,"wind_max_mean":12.9,"severe_days_projected":50.4},{"year":2101,"temp_mean":54.62,"temp_max_extreme":99.5,"temp_min_extreme":-13.97,"precip_annual":40.07,"precip_max_event":2.1,"wind_max_mean":12.9,"severe_days_projected":50.49},{"year":2102,"temp_mean":54.65,"temp_max_extreme":99.54,"temp_min_extreme":-13.94,"precip_annual":40.07,"precip_max_event":2.1,"wind_max_mean":12.9,"severe_days_projected":50.58},{"year":2103,"temp_mean":54.69,"temp_max_extreme":99.58,"temp_min_extreme":-13.91,"precip_annual":40.07,"precip_max_event":2.1,"wind_max_mean":12.9,"severe_days_projected":50.67},{"year":2104,"temp_mean":54.72,"temp_max_extreme":99.62,"temp_min_extreme":-13.88,"precip_annual":40.07,"precip_max_event":2.1,"wind_max_mean":12.9,"severe_days_projected":50.75},{"year":2105,"temp_mean":54.76,"temp_max_extreme":99.66,"temp_min_extreme":-13.85,"precip_annual":40.07,"precip_max_event":2.1,"wind_max_mean":12.9,"severe_days_projected":50.84},{"year":2106,"temp_mean":54.79,"temp_max_extreme":99.7,"temp_min_extreme":-13.82,"precip_annual":40.07,"precip_max_event":2.1,"wind_max_mean":12.9,"severe_days_projected":50.92},{"year":2107,"temp_mean":54.83,"temp_max_extreme":99.74,"temp_min_extreme":-13.79,"precip_annual":40.07,"precip_max_event":2.1,"wind_max_mean":12.9,"severe_days_projected":51.0},{"year":2108,"temp_mean":54.87,"temp_max_extreme":99.79,"temp_min_extreme":-13.75,"precip_annual":40.07,"precip_max_event":2.1,"wind_max_mean":12.9,"severe_days_projected":51.09},{"year":2109,"temp_mean":54.9,"temp_max_extreme":99.83,"temp_min_extreme":-13.72,"precip_annual":40.07,"precip_max_event":2.1,"wind_max_mean":12.9,"severe_days_projected":51.16},{"year":2110,"temp_mean":54.94,"temp_max_extreme":99.87,"temp_min_extreme":-13.69,"precip_annual":40.06,"precip_max_event":2.1,"wind_max_mean":12.9,"severe_days_projected":51.24}];
+
+// ═══════════════════════════════════════════════════════════════════════
+//  DAMAGE MODEL
+//  Sources:
+//   Wood: USDA Forest Products Laboratory, Wood Handbook FPL-GTR-282 (2021)
+//         Natural weathering rates for painted softwood siding
+//   Roof: NRCA (National Roofing Contractors Association) — asphalt shingle lifespan
+//   Foundation: ACI 318 concrete durability, freeze-thaw cycle stress
+//   Energy: EIA Form 861, Iowa residential energy cost data
+// ═══════════════════════════════════════════════════════════════════════
+function computeAllDamage() {
+  const BASELINE_TEMP = 50.3;   // Iowa City 1995–2014 mean (°F)
+  const BASE_ENERGY   = 2200;   // $/yr household energy (2020 dollars, EIA Iowa)
+
+  // Seed: house was built ~1970. By 1980 it already has ~10 years of wear.
+  let wood  = 15;   // % — siding: 10 years into ~5–7yr paint cycle
+  let roof  = 33;   // % — roof: 10 years into ~30yr asphalt shingle life
+  let found =  5;   // % — foundation: concrete, extremely durable
+
+  const results = {};
+  for (const d of RAW) {
+    // ── Wood siding (painted exterior pine) ─────────────────────────────────
+    // Stressors: heat (blistering), freeze-thaw (cracking), moisture cycling (swelling)
+    // Base rate: ~1.8%/yr → ~55 yr life without climate stress
+    const heatStress     = Math.max(0, d.temp_max_extreme - 90) * 0.045;
+    const coldStress     = Math.max(0, -d.temp_min_extreme - 10) * 0.028;
+    const moistureStress = d.precip_max_event * 0.30;
+    const woodRate       = 1.8 + heatStress + coldStress + moistureStress;
+    wood = Math.min(100, wood + woodRate);
+
+    // ── Roof (asphalt shingles) ──────────────────────────────────────────────
+    // Base rate: ~3.3%/yr → ~30 yr life
+    // Hail/storm events cause granule loss and punctures
+    const stormDamage    = d.severe_days_projected * 0.045;
+    const windDamage     = Math.max(0, d.wind_max_mean - 12.0) * 0.25;
+    const roofRate       = 3.3 + stormDamage + windDamage;
+    roof = Math.min(100, roof + roofRate);
+
+    // ── Foundation (poured concrete) ─────────────────────────────────────────
+    // Base rate: ~0.35%/yr → ~285 yr theoretical life
+    // Freeze-thaw cycles are the primary accelerant in Iowa's climate
+    const freezeStress   = Math.max(0, (-d.temp_min_extreme + 15)) * 0.012;
+    const foundRate      = 0.35 + freezeStress;
+    found = Math.min(100, found + foundRate);
+
+    // ── Annual energy cost ───────────────────────────────────────────────────
+    // Iowa City HDD (base 65°F) ≈ 6400 historically; drops ~150 per °F of mean warming
+    // Iowa City CDD (base 65°F) ≈ 700 historically; rises ~120 per °F of mean warming
+    // Heating (gas, ~$1300/yr base): scales with HDD
+    // Cooling (electric, ~$900/yr base): scales with CDD — electricity more expensive/BTU
+    const delta   = d.temp_mean - BASELINE_TEMP;
+    const hdd     = Math.max(0, 6400 - 150 * delta);
+    const cdd     = Math.max(0, 700  + 120 * delta);
+    const heating = 1300 * (hdd / 6400);
+    const cooling =  900 * (cdd / 700);
+    const stormCost = d.severe_days_projected * 1.8;   // storm events → HVAC strain, claims
+    const energy  = Math.round(heating + cooling + stormCost);
+
+    results[d.year] = { ...d, wood, roof, found, energy };
+  }
+  return results;
+}
+
+const DAMAGE = computeAllDamage();
+
+// ═══════════════════════════════════════════════════════════════════════
+//  COLOR UTILITIES
+// ═══════════════════════════════════════════════════════════════════════
+function stressColor(t) {
+  // t: 0–1  (0=healthy, 1=critical)
+  // Green → Yellow → Orange → Red
+  const stops = [
+    [0.00, [74,  222, 128]],   // #4ade80 green
+    [0.35, [250, 204,  21]],   // #facc15 yellow
+    [0.65, [249, 115,  22]],   // #f97316 orange
+    [1.00, [185,  28,  28]],   // #b91c1c red
+  ];
+  t = Math.max(0, Math.min(1, t));
+  let lo = stops[0], hi = stops[stops.length - 1];
+  for (let i = 0; i < stops.length - 1; i++) {
+    if (t >= stops[i][0] && t <= stops[i+1][0]) { lo = stops[i]; hi = stops[i+1]; break; }
+  }
+  const f = (t - lo[0]) / (hi[0] - lo[0]);
+  const r = lo[1].map((v, i) => v + f * (hi[1][i] - v));
+  return new THREE.Color(r[0]/255, r[1]/255, r[2]/255);
+}
+
+function cssStressColor(t) {
+  const c = stressColor(t);
+  return `rgb(${Math.round(c.r*255)},${Math.round(c.g*255)},${Math.round(c.b*255)})`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  THREE.JS SCENE
+// ═══════════════════════════════════════════════════════════════════════
+const container = document.getElementById('canvas-container');
+const W = () => container.clientWidth;
+const H = () => container.clientHeight;
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.9;
+renderer.setSize(W(), H());
+container.appendChild(renderer.domElement);
+
+const scene  = new THREE.Scene();
+scene.background = new THREE.Color(0x070707);
+scene.fog = new THREE.Fog(0x070707, 18, 35);
+
+const camera = new THREE.PerspectiveCamera(42, W()/H(), 0.1, 100);
+camera.position.set(7, 4.5, 9);
+camera.lookAt(0, 0.8, 0);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.maxPolarAngle = Math.PI * 0.48;
+controls.minDistance = 4;
+controls.maxDistance = 20;
+controls.target.set(0, 0.8, 0);
+
+// ── Lighting ─────────────────────────────────────────────────────────
+const ambient = new THREE.AmbientLight(0xffffff, 0.35);
+scene.add(ambient);
+
+const sun = new THREE.DirectionalLight(0xfff4e0, 1.4);
+sun.position.set(6, 10, 5);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.near = 0.5;
+sun.shadow.camera.far  = 40;
+sun.shadow.camera.left = -8;
+sun.shadow.camera.right = 8;
+sun.shadow.camera.top = 8;
+sun.shadow.camera.bottom = -8;
+scene.add(sun);
+
+const fill = new THREE.DirectionalLight(0x8ecae6, 0.3);
+fill.position.set(-5, 3, -3);
+scene.add(fill);
+
+// ── Ground ────────────────────────────────────────────────────────────
+const groundGeo = new THREE.PlaneGeometry(30, 30);
+const groundMat = new THREE.MeshLambertMaterial({ color: 0x111511 });
+const ground    = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// Concrete path
+const pathGeo = new THREE.BoxGeometry(1.2, 0.02, 3);
+const pathMat = new THREE.MeshLambertMaterial({ color: 0x1a1a1a });
+const path    = new THREE.Mesh(pathGeo, pathMat);
+path.position.set(0, 0.01, 3.5);
+scene.add(path);
+
+// ── House geometry helpers ─────────────────────────────────────────────
+function box(w, h, d, color, x, y, z, castShadow=true) {
+  const m = new THREE.Mesh(
+    new THREE.BoxGeometry(w, h, d),
+    new THREE.MeshLambertMaterial({ color })
+  );
+  m.position.set(x, y, z);
+  m.castShadow  = castShadow;
+  m.receiveShadow = true;
+  scene.add(m);
+  return m;
+}
+
+function gableRoof(w, h, d, color, x, y, z) {
+  const geo = new THREE.BufferGeometry();
+  const hw = w/2, hd = d/2;
+  // 6 vertices: front triangle + back triangle
+  const verts = new Float32Array([
+    -hw, 0, -hd,   hw, 0, -hd,   0, h, -hd,   // front tri
+    -hw, 0,  hd,   hw, 0,  hd,   0, h,  hd,   // back tri
+  ]);
+  // Triangles: front, back, left slope (2 tris), right slope (2 tris)
+  const idx = [
+    0,1,2,          // front
+    5,4,3,          // back (reversed for normals)
+    0,2,5, 0,5,3,   // left slope
+    2,1,4, 2,4,5,   // right slope
+  ];
+  geo.setIndex(idx);
+  geo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
+  geo.computeVertexNormals();
+  const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color, side: THREE.DoubleSide }));
+  m.position.set(x, y, z);
+  m.castShadow = true;
+  m.receiveShadow = true;
+  scene.add(m);
+  return m;
+}
+
+// ── Build the ranch house ─────────────────────────────────────────────
+// Ranch house: long, low, single-story. ~1400 sq ft footprint.
+
+// Main body
+const siding = box(6.4, 1.8, 3.2, 0x3a2d1e, 0, 0.9, 0);
+siding.userData = { zone: 'siding', label: 'Exterior siding (pine)', tip: 'Wood degradation from UV, moisture cycling, heat blistering, and freeze-thaw cracking.' };
+
+// Foundation visible strip
+const foundation = box(6.6, 0.22, 3.4, 0x1f1f1f, 0, 0.11, 0);
+foundation.userData = { zone: 'foundation', label: 'Foundation (concrete)', tip: 'Freeze-thaw cycles expand water in micro-cracks, spalling and weakening the concrete over time.' };
+
+// Roof
+const roof = gableRoof(6.8, 1.1, 3.5, 0x1a1a1a, 0, 1.8, 0);
+roof.userData = { zone: 'roof', label: 'Roof (asphalt shingle)', tip: 'Hail, wind, and UV degrade shingle granules. Severe storms accelerate loss.' };
+
+// Chimney
+const chimney = box(0.4, 1.0, 0.4, 0x1e1a18, -1.8, 2.5, -0.6);
+chimney.userData = { zone: 'roof', label: 'Chimney', tip: 'Mortar joint degradation from temperature cycling.' };
+
+// Windows (front face z=-1.6)
+const winMat = new THREE.MeshLambertMaterial({ color: 0x0a1520, emissive: 0x061018, emissiveIntensity: 0.3 });
+const makeWindow = (x, y, z) => {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.65, 0.06), winMat);
+  m.position.set(x, y, z);
+  m.userData = { zone: 'windows', label: 'Windows', tip: 'Thermal bridging and seal failure increase with temperature extremes. Energy loss rises.' };
+  scene.add(m);
+  return m;
+};
+const windows = [
+  makeWindow(-1.8, 1.0, -1.64),
+  makeWindow( 0.6, 1.0, -1.64),
+  makeWindow( 2.1, 1.0, -1.64),
+];
+
+// Door
+const doorMat = new THREE.MeshLambertMaterial({ color: 0x0f0b09 });
+const door = new THREE.Mesh(new THREE.BoxGeometry(0.75, 1.1, 0.06), doorMat);
+door.position.set(-0.6, 0.65, -1.64);
+scene.add(door);
+
+// Garage section (left extension — ranch houses often have attached garage)
+const garage = box(2.0, 1.5, 3.0, 0x2e2318, -4.2, 0.75, 0.1);
+garage.userData = { zone: 'siding', label: 'Garage (siding)', tip: 'Same painted pine siding — same degradation profile.' };
+const garageRoof = gableRoof(2.2, 0.7, 3.2, 0x181818, -4.2, 1.5, 0.1);
+garageRoof.userData = { zone: 'roof', label: 'Garage roof', tip: 'Roof structure shared with main house.' };
+const garageDoor = box(1.6, 1.0, 0.05, 0x151515, -4.2, 0.6, -1.51);
+
+// Trim / fascia
+box(6.5, 0.08, 0.04, 0x1c1412, 0, 1.8, -1.61);  // front fascia
+
+// Step
+box(1.0, 0.12, 0.4, 0x181818, -0.6, 0.06, -1.82);
+
+// Raycasting
+const raycaster  = new THREE.Raycaster();
+const mouse      = new THREE.Vector2();
+const hittable   = [siding, foundation, roof, chimney, garage, garageRoof, ...windows];
+const tooltip    = document.getElementById('tooltip');
+
+renderer.domElement.addEventListener('mousemove', e => {
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((e.clientX - rect.left) / rect.width)  * 2 - 1;
+  mouse.y = -((e.clientY - rect.top)  / rect.height) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObjects(hittable);
+  if (hits.length > 0 && hits[0].object.userData.zone) {
+    const d = hits[0].object.userData;
+    tooltip.style.display = 'block';
+    tooltip.style.left    = (e.clientX + 14) + 'px';
+    tooltip.style.top     = (e.clientY - 10) + 'px';
+    tooltip.innerHTML     = `<strong style="color:#fff">${d.label}</strong><br>${d.tip}`;
+  } else {
+    tooltip.style.display = 'none';
+  }
+});
+renderer.domElement.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+
+// ═══════════════════════════════════════════════════════════════════════
+//  STATE & UI UPDATE
+// ═══════════════════════════════════════════════════════════════════════
+let currentIdx = 0;
+const YEARS = RAW.map(r => r.year);
+const BASE_ENERGY_1980 = DAMAGE[1980].energy;
+
+function setMeshColor(mesh, color) {
+  if (mesh.material) mesh.material.color.set(color);
+}
+
+// Siding base color: warm tan → dark brown as damage increases
+function sidingBaseColor(t) {
+  // t: 0–1 damage
+  const lo = new THREE.Color(0x4a3824);  // warm ranch tan
+  const hi = new THREE.Color(0x1a0d05);  // near-black rotted
+  return lo.lerp(hi, Math.min(1, t * 1.1));
+}
+
+function update(idx) {
+  currentIdx = idx;
+  const year = YEARS[idx];
+  const d    = DAMAGE[year];
+  const raw  = RAW[idx];
+
+  // ── House colors (heat map) ──────────────────────────────────────────
+  const wt = d.wood  / 100;
+  const rt = d.roof  / 100;
+  const ft = d.found / 100;
+
+  setMeshColor(siding,     sidingBaseColor(wt));
+  setMeshColor(garage,     sidingBaseColor(wt));
+  setMeshColor(roof,       stressColor(rt));
+  setMeshColor(garageRoof, stressColor(rt));
+  setMeshColor(chimney,    stressColor(rt * 0.9));
+  setMeshColor(foundation, stressColor(ft));
+
+  // Window glow: increases with energy cost stress
+  const energyStress = Math.min(1, (d.energy - 1800) / 1200);
+  windows.forEach(w => {
+    w.material.emissiveIntensity = 0.15 + energyStress * 0.5;
+    w.material.emissive.setHex(energyStress > 0.5 ? 0x1a0800 : 0x061018);
+  });
+
+  // Ground: greenish → drought-brown as heat increases
+  const tempStress = Math.max(0, (raw.temp_mean - 49) / 8);
+  groundMat.color.set(new THREE.Color(0x111511).lerp(new THREE.Color(0x1a1005), Math.min(1, tempStress)));
+
+  // Ambient light: slightly warmer / harsher in high-stress years
+  ambient.intensity = 0.35 + tempStress * 0.1;
+  sun.color.setHex(tempStress > 0.6 ? 0xffe8c0 : 0xfff4e0);
+
+  // ── Year display ──────────────────────────────────────────────────────
+  document.getElementById('year-display').textContent = year;
+
+  // ── Stats panel ───────────────────────────────────────────────────────
+  const BASELINE_TEMP = 50.3;
+  const deltaT = (raw.temp_mean - BASELINE_TEMP).toFixed(1);
+  const sign   = deltaT >= 0 ? '+' : '';
+
+  document.getElementById('stat-temp').innerHTML =
+    `${raw.temp_mean.toFixed(1)}<span class="card-unit">°F</span>`;
+  document.getElementById('stat-temp-delta').textContent =
+    `${sign}${deltaT}°F vs. 1995–2014 mean`;
+
+  document.getElementById('stat-hot').innerHTML =
+    `${raw.temp_max_extreme.toFixed(1)}<span class="card-unit">°F</span>`;
+  document.getElementById('stat-rain').innerHTML =
+    `${raw.precip_max_event.toFixed(2)}<span class="card-unit">in</span>`;
+  document.getElementById('stat-storms').textContent =
+    raw.severe_days_projected.toFixed(1);
+
+  document.getElementById('stat-energy').textContent = `$${d.energy.toLocaleString()}`;
+  const eSign = d.energy >= BASE_ENERGY_1980 ? '+' : '';
+  document.getElementById('stat-energy-delta').textContent =
+    `${eSign}$${(d.energy - BASE_ENERGY_1980).toLocaleString()} vs. 1980`;
+
+  // ── Damage bars ────────────────────────────────────────────────────────
+  const setBar = (barId, pctId, pct) => {
+    const el = document.getElementById(barId);
+    el.style.width           = `${pct.toFixed(1)}%`;
+    el.style.backgroundColor = cssStressColor(pct / 100);
+    document.getElementById(pctId).textContent = `${pct.toFixed(0)}%`;
+    document.getElementById(pctId).style.color  = cssStressColor(pct / 100);
+  };
+  setBar('wood-bar',  'wood-pct',  d.wood);
+  setBar('roof-bar',  'roof-pct',  d.roof);
+  setBar('found-bar', 'found-pct', d.found);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  SLIDER & PLAYBACK
+// ═══════════════════════════════════════════════════════════════════════
+const slider  = document.getElementById('year-slider');
+const playBtn = document.getElementById('play-btn');
+let playing   = false;
+let playTimer = null;
+
+slider.addEventListener('input', () => {
+  update(parseInt(slider.value));
+});
+
+function step() {
+  const next = Math.min(130, currentIdx + 1);
+  slider.value = next;
+  update(next);
+  if (next >= 130) { stopPlay(); return; }
+  playTimer = setTimeout(step, 80);   // ~80ms per year = ~10s for full timeline
+}
+
+function startPlay() {
+  if (currentIdx >= 130) { slider.value = 0; update(0); }
+  playing = true;
+  playBtn.textContent = '⏸ PAUSE';
+  step();
+}
+
+function stopPlay() {
+  playing = false;
+  clearTimeout(playTimer);
+  playBtn.textContent = '▶ PLAY';
+}
+
+playBtn.addEventListener('click', () => playing ? stopPlay() : startPlay());
+
+// ── Keyboard shortcut ─────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space') { e.preventDefault(); playing ? stopPlay() : startPlay(); }
+  if (e.code === 'ArrowRight') { stopPlay(); const n=Math.min(130,currentIdx+1); slider.value=n; update(n); }
+  if (e.code === 'ArrowLeft')  { stopPlay(); const n=Math.max(0,currentIdx-1);  slider.value=n; update(n); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+//  RENDER LOOP
+// ═══════════════════════════════════════════════════════════════════════
+function onResize() {
+  camera.aspect = W() / H();
+  camera.updateProjectionMatrix();
+  renderer.setSize(W(), H());
+}
+window.addEventListener('resize', onResize);
+
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+// Initial render
+update(0);
+animate();
+</script>
+</body>
+</html>

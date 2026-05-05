@@ -1,0 +1,14 @@
+# Iowa City Weather Prediction Model — Dependencies
+# Install with:  pip install -r requirements.txt
+
+numpy>=1.26
+pandas>=2.2
+scikit-learn>=1.4
+matplotlib>=3.8
+seaborn>=0.13
+requests>=2.31
+jupyter>=1.0
+ipykernel>=6.29
+scipy>=1.13
+plotly>=5.20
+kaleido>=0.2

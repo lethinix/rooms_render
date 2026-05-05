@@ -1,0 +1,26 @@
+# Python virtual environment
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Generated outputs (optional to commit — large files)
+*.png
+*.csv
+
+# macOS
+.DS_Store
+.AppleDouble
+
+# Editor
+.vscode/
+*.swp

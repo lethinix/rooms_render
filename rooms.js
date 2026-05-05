@@ -11,7 +11,7 @@ const ROOMS = [
       {
         id: 'books',
         title: 'Book 1 — Introduction',
-        theta: -4.7, phi: -15.2,
+        theta: -4.7, phi: -13.2,
         type: 'text',
         content: `<div class="text-scroll">
       <p><strong>I. Introduction</strong></p>
@@ -34,7 +34,7 @@ const ROOMS = [
       {
         id: 'radio',
         title: 'Radio — Audio Archive',
-        theta: -7.6, phi: -15.1,
+        theta: -7.6, phi: -13.1,
         type: 'audio',
         content: 'assets/The Past Room Pt 2.m4a'
       },
@@ -101,14 +101,14 @@ const ROOMS = [
         title: 'Page 1',
         theta: -6.4, phi: 0.2,   // ← use θ/φ HUD to position on screen
         type: 'link',
-        url: 'https://aishaa.net/projects/predictive_model/climate_projection_ssp245.html'
+        url: 'predictive_model/climate_projection_ssp245.html'
       },
       {
         id: 'screen-right',
         title: 'Page 2',
         theta:  2, phi: 0,   // ← use θ/φ HUD to position on screen
         type: 'link',
-        url: 'https://aishaa.net/projects/predictive_model/house_impact.html'
+        url: 'predictive_model/house_impact.html'
       },
     ]
   }
@@ -525,6 +525,37 @@ function updateCoordsFromPointer(clientX, clientY) {
   coordHUD.style.left = clientX + 'px';
   coordHUD.style.top  = clientY + 'px';
 }
+
+// ── Background audio ─────────────────────────────────────────────────────────
+const bgAudio = document.createElement('audio');
+bgAudio.src    = 'assets/Perkins%20Ln%20W.m4a';
+bgAudio.loop   = true;
+bgAudio.volume = 0.22;
+
+const audioBtn = document.createElement('button');
+audioBtn.id = 'audio-btn';
+audioBtn.setAttribute('aria-label', 'Toggle background music');
+
+function syncAudioBtn() {
+  audioBtn.textContent = bgAudio.paused ? '♫' : '⏸';
+  audioBtn.classList.toggle('muted', bgAudio.paused);
+}
+syncAudioBtn();
+
+audioBtn.addEventListener('click', () => {
+  bgAudio.paused ? bgAudio.play() : bgAudio.pause();
+});
+bgAudio.addEventListener('play',  syncAudioBtn);
+bgAudio.addEventListener('pause', syncAudioBtn);
+
+// Try autoplay; fall back to first user interaction
+bgAudio.play().catch(() => {
+  const startOnce = () => { bgAudio.play().catch(() => {}); };
+  window.addEventListener('pointerdown', startOnce, { once: true });
+  window.addEventListener('keydown',     startOnce, { once: true });
+});
+
+document.body.appendChild(audioBtn);
 
 // ── Boot: load first room ─────────────────────────────────────────────────────
 loadPanorama(ROOMS[0].panorama);
