@@ -252,4 +252,17 @@ audio { width:100%; }
 @media (max-width:640px) {
   .panel { width:96%; }
   .hotspot-label { font-size:12px; padding:6px; }
+
+  /* Shrink nav buttons so they fit without reaching the audio button */
+  .room-btn { font-size: 11px; padding: 6px 10px; }
+
+  /* Drop audio button below the nav row so they don't overlap */
+  #audio-btn { top: 62px; }
+
+  /* Hide long navigation hint — keep only the legend + tap cue */
+  .hint-nav { display: none; }
+  .hint { font-size: 12px; padding: 6px 8px; }
+
+  /* Tighten WIP badge slightly */
+  .wip-badge { font-size: 11px; padding: 5px 9px; }
 }

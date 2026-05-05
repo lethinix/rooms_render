@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>2110 — House Impact Visualization</title>
 <script type="importmap">
 {
@@ -106,6 +107,48 @@
     position:absolute; top:14px; left:14px;
     font-size:0.55rem; letter-spacing:0.18em;
     color:#2a2a2a; pointer-events:none;
+  }
+
+  /* Touch / three.js canvas */
+  canvas { touch-action: none; }
+
+  /* ── Mobile ─────────────────────────────────────────────────────────── */
+  @media (max-width: 680px) {
+    body { height: auto; overflow-y: auto; }
+
+    #header { padding: 8px 12px; }
+    #header h1 { font-size: 0.48rem; letter-spacing: 0.1em; }
+    #year-display { font-size: 2rem; }
+
+    #main { flex-direction: column; height: auto; overflow: visible; }
+
+    #canvas-container {
+      flex: none;
+      height: 52vw;
+      min-height: 220px;
+      width: 100%;
+    }
+
+    #sidebar {
+      width: 100%;
+      flex-direction: row;
+      flex-wrap: wrap;
+      border-left: none;
+      border-top: 1px solid #161616;
+      overflow: visible;
+      padding: 10px;
+      gap: 8px;
+    }
+    .card { flex: 1 1 calc(50% - 4px); min-width: 130px; padding: 10px; }
+    .card-value { font-size: 1.5rem; }
+    .bar-row { margin-bottom: 7px; }
+    #source { width: 100%; }
+
+    #controls { padding: 10px 12px; gap: 10px; }
+    #play-btn { padding: 6px 12px; font-size: 0.6rem; }
+    #slider-label { font-size: 0.56rem; min-width: 58px; }
+
+    #scenario-badge { font-size: 0.48rem; top: 8px; left: 8px; }
   }
 </style>
 </head>
@@ -492,6 +535,25 @@ renderer.domElement.addEventListener('mousemove', e => {
   }
 });
 renderer.domElement.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+
+// Touch tooltip (tap to reveal, tap elsewhere to dismiss)
+renderer.domElement.addEventListener('touchstart', e => {
+  const t = e.touches[0];
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x =  ((t.clientX - rect.left) / rect.width)  * 2 - 1;
+  mouse.y = -((t.clientY - rect.top)  / rect.height) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObjects(hittable);
+  if (hits.length > 0 && hits[0].object.userData.zone) {
+    const d = hits[0].object.userData;
+    tooltip.style.display = 'block';
+    tooltip.style.left    = (t.clientX + 10) + 'px';
+    tooltip.style.top     = (t.clientY - 70) + 'px';
+    tooltip.innerHTML     = `<strong style="color:#fff">${d.label}</strong><br>${d.tip}`;
+  } else {
+    tooltip.style.display = 'none';
+  }
+}, { passive: true });
 
 // ═══════════════════════════════════════════════════════════════════════
 //  STATE & UI UPDATE
