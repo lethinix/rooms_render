@@ -1,17 +1,21 @@
 import * as THREE from 'https://esm.sh/three@0.152.0';
 import { OrbitControls } from 'https://esm.sh/three@0.152.0/examples/jsm/controls/OrbitControls.js';
 
+const DEV_MODE = new URLSearchParams(window.location.search).has('dev');
+const IS_TOUCH  = window.matchMedia('(hover: none)').matches;
+
 // ── Room definitions ──────────────────────────────────────────────────────────
 const ROOMS = [
   {
     id: 'past',
     label: 'The Past Room',
-    panorama: 'assets/re-render_room1.jpg',
+    panorama: 'assets/room1_edited.png',
+    initialView: { theta: -3.2, phi: -23.3 },
     hotspots: [
       {
         id: 'books',
         title: 'Book 1 — Introduction',
-        theta: -4.7, phi: -13.2,
+        theta: -4.7, phi: -33.8,
         type: 'text',
         content: `<div class="text-scroll">
       <p><strong>I. Introduction</strong></p>
@@ -34,42 +38,42 @@ const ROOMS = [
       {
         id: 'radio',
         title: 'Radio — Audio Archive',
-        theta: -7.6, phi: -13.1,
+        theta: -7.6, phi: -34.3,
         type: 'audio',
         content: 'assets/The Past Room Pt 2.m4a'
       },
       {
         id: 'tv',
         title: 'TV — Visual Artifact',
-        theta: 21.5, phi: -17.2,
+        theta: 19.7, phi: -37.3,
         type: 'video',
         content: 'assets/tv_video.mp4'
       },
       {
         id: 'video1',
         title: 'Window 1 — Wagtail',
-        theta: -21.3, phi: -4.9,
+        theta: -18.7, phi: -26.5,
         type: 'video',
         content: 'assets/wagtail.mp4'
       },
       {
         id: 'video2',
         title: 'Window 2 — Harebells',
-        theta: -8.2, phi: -4.0,
+        theta: -7.3, phi: -25.8,
         type: 'video',
         content: 'assets/harebells.mp4'
       },
       {
         id: 'video3',
         title: 'Window 3 — Plant Sways',
-        theta: 6.3, phi: -4.1,
+        theta: 6.0, phi: -25.4,
         type: 'video',
         content: 'assets/plant_sways.mp4'
       },
       {
         id: 'video4',
         title: 'Window 4 — Field',
-        theta: 20.4, phi: -4.7,
+        theta: 18.8, phi: -26.5,
         type: 'video',
         content: 'assets/field.mp4'
       }
@@ -78,37 +82,43 @@ const ROOMS = [
   {
     id: 'present',
     label: 'The Present Room',
-    panorama: 'assets/re-render_room2.jpg',
+    panorama: 'assets/room2_edited.png',
+    initialView: { theta: -3.2, phi: -23.3 },
     hotspots: []
   },
   {
     id: 'future',
     label: 'The Future Room',
-    panorama: 'assets/re-render_room3.jpg',
+    panorama: 'assets/room3_edited.png',
+    initialView: { theta: -3.2, phi: -23.3 },
     screen: {
       src: 'assets/house_model.mov',
       opacity: 0.5,
       corners: [
-        { theta: -8.1, phi:  1.8 },   // top-left
-        { theta:  5.9, phi:  1.6 },   // top-right
-        { theta: -8.3, phi: -6.4 },   // bottom-left
-        { theta:  6.1, phi: -5.7 },   // bottom-right
+        { theta: -5.6, phi:  -20.9 },   // top-left
+        { theta:  4.4, phi:  -20.8 },   // top-right
+        { theta:  -5.7, phi: -26.0 },   // bottom-left
+        { theta: 4.6, phi: -25.9 },   // bottom-right
+
+        
       ]
     },
     hotspots: [
       {
         id: 'screen-left',
         title: 'Page 1',
-        theta: -6.4, phi: 0.2,   // ← use θ/φ HUD to position on screen
+        theta: -2.5, phi: -23.3,
         type: 'link',
-        url: 'predictive_model/climate_projection_ssp245.html'
+        url: 'predictive_model/climate_projection_ssp245.html',
+        loadingText: 'data loading...'
       },
       {
         id: 'screen-right',
         title: 'Page 2',
-        theta:  2, phi: 0,   // ← use θ/φ HUD to position on screen
+        theta: 2.5, phi: -23.3,
         type: 'link',
-        url: 'predictive_model/house_impact.html'
+        url: 'predictive_model/house_impact.html',
+        loadingText: 'house model rendering...'
       },
     ]
   }
@@ -182,18 +192,41 @@ renderer.domElement.addEventListener('touchend', (e) => {
 
 // ── Panorama sphere (texture swapped on room change) ──────────────────────────
 const loader = new THREE.TextureLoader();
-const sphereMat = new THREE.MeshBasicMaterial({ side: THREE.BackSide });
+const sphereMat = new THREE.MeshBasicMaterial({ side: THREE.BackSide, transparent: true, opacity: 1 });
 const sphere = new THREE.Mesh(new THREE.SphereGeometry(500, 60, 40), sphereMat);
 scene.add(sphere);
 
-function loadPanorama(path) {
+// ── Loading spinner ───────────────────────────────────────────────────────────
+const loaderEl = document.createElement('div');
+loaderEl.id = 'room-loader';
+document.body.appendChild(loaderEl);
+
+function fadeRoom(to, duration = 350, onDone) {
+  const from = sphereMat.opacity;
+  const start = performance.now();
+  function step(now) {
+    const t = Math.min(1, (now - start) / duration);
+    sphereMat.opacity = from + (to - from) * t;
+    if (t < 1) { requestAnimationFrame(step); }
+    else { onDone?.(); }
+  }
+  requestAnimationFrame(step);
+}
+
+function loadPanorama(path, onLoaded) {
+  loaderEl.classList.add('active');
   loader.load(path, (texture) => {
     texture.mapping = THREE.EquirectangularReflectionMapping;
     if (sphereMat.map) sphereMat.map.dispose();
     sphereMat.map = texture;
     sphereMat.needsUpdate = true;
+    loaderEl.classList.remove('active');
+    fadeRoom(1, 400);
+    onLoaded?.();
   }, undefined, (err) => {
     console.error('Panorama load error', err);
+    loaderEl.classList.remove('active');
+    fadeRoom(1, 400);
   });
 }
 
@@ -290,7 +323,7 @@ function buildScreenVideo({ src, corners, opacity = 0.5 }) {
 
 function clearHotspots() {
   hotspotObjects.forEach(s => scene.remove(s));
-  labelElements.forEach(item => { item.el.remove(); item.iconEl?.remove(); });
+  labelElements.forEach(item => { item.el.remove(); });
   hotspotObjects  = [];
   labelElements   = [];
   currentHotspots = [];
@@ -314,12 +347,7 @@ function buildHotspots(hotspots) {
     label.innerHTML = `<div style="font-weight:600">${h.title.split('—')[0].trim()}</div><div class="muted">${h.title.split('—')[1]?.trim() || ''}</div>`;
     container.appendChild(label);
 
-    const iconEl = document.createElement('div');
-    iconEl.className = 'hotspot-click-icon';
-    iconEl.textContent = '☝';
-    container.appendChild(iconEl);
-
-    labelElements.push({ el: label, iconEl, data: h, obj: sprite });
+    labelElements.push({ el: label, data: h, obj: sprite });
   });
 }
 
@@ -340,7 +368,7 @@ function onPointerDown(event) {
     const h = currentHotspots.find(x => x.id === hit.object.name);
     if (!h) return;
     if (h.type === 'link') {
-      window.open(h.url, '_blank', 'noopener');
+      showLinkLoader(h.loadingText || 'loading...', h.url);
     } else {
       openPanel(h);
     }
@@ -379,11 +407,8 @@ function updateLabels() {
     const sy = (vec.y * -0.5 + 0.5) * renderer.domElement.clientHeight;
     item.el.style.left    = `${sx}px`;
     item.el.style.top     = `${sy}px`;
-    item.iconEl.style.left = `${sx}px`;
-    item.iconEl.style.top  = `${sy + 20}px`;
     const onScreen = vec.z < 1 && vec.z > -1 && Math.abs(vec.x) < 1.2 && Math.abs(vec.y) < 1.2;
-    item.el.classList.toggle('visible', onScreen && hoveredHotspotId === item.data.id);
-    item.iconEl.classList.toggle('visible', onScreen);
+    item.el.classList.toggle('visible', onScreen && (hoveredHotspotId === item.data.id || IS_TOUCH));
   });
 }
 
@@ -391,7 +416,16 @@ function updateLabels() {
 function openPanel(h) {
   panelTitle.textContent = h.title;
   if (h.type === 'text') {
-    panelContent.innerHTML = h.content;
+    panelContent.innerHTML = h.content + '<div class="scroll-hint">scroll for more ↓</div>';
+    setTimeout(() => {
+      const ts = panelContent.querySelector('.text-scroll');
+      const hint = panelContent.querySelector('.scroll-hint');
+      if (ts && hint) {
+        const update = () => { hint.style.opacity = (ts.scrollHeight - ts.scrollTop <= ts.clientHeight + 8) ? '0' : '1'; };
+        ts.addEventListener('scroll', update);
+        update();
+      }
+    }, 0);
   } else if (h.type === 'audio') {
     panelContent.innerHTML = `<div class="media">
       <p class="muted">Audio artifact from the Past Room</p>
@@ -440,6 +474,21 @@ function animate() {
 animate();
 document.body.style.userSelect = 'none';
 
+function animateCameraTo(targetPoint, duration = 600) {
+  const startQuat = camera.quaternion.clone();
+  const tmpCam = camera.clone(); tmpCam.lookAt(targetPoint);
+  const endQuat = tmpCam.quaternion.clone();
+  controls.target.copy(targetPoint);
+  const start = performance.now();
+  function step(now) {
+    const t = Math.min(1, (now - start) / duration);
+    THREE.Quaternion.slerp(startQuat, endQuat, camera.quaternion, t);
+    controls.update();
+    if (t < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
 // ── Initial camera orientation toward hotspot centroid ────────────────────────
 function setInitialViewToHotspots({ animated = false, duration = 600 } = {}) {
   if (hotspotObjects.length === 0) return;
@@ -473,12 +522,19 @@ function switchRoom(idx) {
   currentRoomIdx = idx;
   navBar.querySelectorAll('.room-btn').forEach((btn, i) => btn.classList.toggle('active', i === idx));
   closePanel();
-  clearHotspots();
-  clearScreenMeshes();
-  loadPanorama(room.panorama);
-  buildHotspots(room.hotspots);
-  if (room.screen) buildScreenVideo(room.screen);
-  setInitialViewToHotspots({ animated: true });
+  fadeRoom(0, 300, () => {
+    clearHotspots();
+    clearScreenMeshes();
+    buildHotspots(room.hotspots);
+    if (room.screen) buildScreenVideo(room.screen);
+    if (room.initialView) {
+      const t = sphericalToVector(10, room.initialView.theta, room.initialView.phi);
+      animateCameraTo(t);
+    } else {
+      setInitialViewToHotspots({ animated: true });
+    }
+    loadPanorama(room.panorama);
+  });
 }
 
 // ── Room nav bar ──────────────────────────────────────────────────────────────
@@ -493,6 +549,39 @@ ROOMS.forEach((room, idx) => {
   navBar.appendChild(btn);
 });
 document.body.appendChild(navBar);
+
+// ── Fullscreen button ─────────────────────────────────────────────────────────
+const fsBtn = document.createElement('button');
+fsBtn.id = 'fs-btn';
+fsBtn.title = 'Toggle fullscreen';
+fsBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>`;
+fsBtn.addEventListener('click', () => {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen();
+  } else {
+    document.exitFullscreen();
+  }
+});
+document.addEventListener('fullscreenchange', () => {
+  const inFS = !!document.fullscreenElement;
+  fsBtn.innerHTML = inFS
+    ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>`
+    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>`;
+});
+document.body.appendChild(fsBtn);
+
+// ── Link loading overlay ──────────────────────────────────────────────────────
+const linkLoaderEl = document.createElement('div');
+linkLoaderEl.id = 'link-loader';
+linkLoaderEl.innerHTML = `<div class="link-loader-ring"></div><p class="link-loader-text"></p>`;
+document.body.appendChild(linkLoaderEl);
+
+function showLinkLoader(text, url) {
+  linkLoaderEl.querySelector('.link-loader-text').textContent = text;
+  linkLoaderEl.classList.add('active');
+  window.open(url, '_blank', 'noopener');
+  setTimeout(() => linkLoaderEl.classList.remove('active'), 2800);
+}
 
 // ── Theta/phi HUD (follows cursor) ───────────────────────────────────────────
 const coordHUD = document.createElement('div');
@@ -510,6 +599,7 @@ coordHUD.style.cssText = [
 document.body.appendChild(coordHUD);
 
 function updateCoordsFromPointer(clientX, clientY) {
+  if (!DEV_MODE) return;
   const rect = renderer.domElement.getBoundingClientRect();
   if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
     coordHUD.style.display = 'none'; return;
@@ -558,6 +648,10 @@ bgAudio.play().catch(() => {
 document.body.appendChild(audioBtn);
 
 // ── Boot: load first room ─────────────────────────────────────────────────────
+sphereMat.opacity = 0;
 loadPanorama(ROOMS[0].panorama);
 buildHotspots(ROOMS[0].hotspots);
-setInitialViewToHotspots();
+const initTarget = sphericalToVector(10, -3.2, -23.3);
+controls.target.copy(initTarget);
+camera.lookAt(initTarget);
+controls.update();
