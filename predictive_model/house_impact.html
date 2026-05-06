@@ -212,6 +212,7 @@
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader }    from 'three/addons/loaders/GLTFLoader.js';
 
 // ═══════════════════════════════════════════════════════════════════════
 //  CLIMATE DATA  — projection_ssp245_iowa_city.csv
@@ -377,103 +378,69 @@ const path    = new THREE.Mesh(pathGeo, pathMat);
 path.position.set(0, 0.01, 3.5);
 scene.add(path);
 
-// ── House geometry helpers ─────────────────────────────────────────────
-function box(w, h, d, color, x, y, z, castShadow=true) {
-  const m = new THREE.Mesh(
-    new THREE.BoxGeometry(w, h, d),
-    new THREE.MeshLambertMaterial({ color })
-  );
-  m.position.set(x, y, z);
-  m.castShadow  = castShadow;
-  m.receiveShadow = true;
-  scene.add(m);
-  return m;
-}
+// ── Shared damage zone materials ──────────────────────────────────────
+const sidingMat = new THREE.MeshLambertMaterial({ color: 0x4a3824 });
+const roofMat   = new THREE.MeshLambertMaterial({ color: 0x1a1a1a });
+const windowMat = new THREE.MeshLambertMaterial({ color: 0x0a1520, emissive: new THREE.Color(0x061018), emissiveIntensity: 0.3 });
+const doorMat   = new THREE.MeshLambertMaterial({ color: 0x0f0b09 });
 
-function gableRoof(w, h, d, color, x, y, z) {
-  const geo = new THREE.BufferGeometry();
-  const hw = w/2, hd = d/2;
-  // 6 vertices: front triangle + back triangle
-  const verts = new Float32Array([
-    -hw, 0, -hd,   hw, 0, -hd,   0, h, -hd,   // front tri
-    -hw, 0,  hd,   hw, 0,  hd,   0, h,  hd,   // back tri
-  ]);
-  // Triangles: front, back, left slope (2 tris), right slope (2 tris)
-  const idx = [
-    0,1,2,          // front
-    5,4,3,          // back (reversed for normals)
-    0,2,5, 0,5,3,   // left slope
-    2,1,4, 2,4,5,   // right slope
-  ];
-  geo.setIndex(idx);
-  geo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
-  geo.computeVertexNormals();
-  const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color, side: THREE.DoubleSide }));
-  m.position.set(x, y, z);
-  m.castShadow = true;
-  m.receiveShadow = true;
-  scene.add(m);
-  return m;
-}
+const hittable  = [];
 
-// ── Build the ranch house ─────────────────────────────────────────────
-// Ranch house: long, low, single-story. ~1400 sq ft footprint.
+// ── Loading indicator ─────────────────────────────────────────────────
+const loadMsg = document.createElement('div');
+loadMsg.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#2a2a2a;font-size:0.6rem;letter-spacing:0.18em;pointer-events:none;';
+loadMsg.textContent = 'LOADING MODEL';
+container.appendChild(loadMsg);
 
-// Main body
-const siding = box(6.4, 1.8, 3.2, 0x3a2d1e, 0, 0.9, 0);
-siding.userData = { zone: 'siding', label: 'Exterior siding (pine)', tip: 'Wood degradation from UV, moisture cycling, heat blistering, and freeze-thaw cracking.' };
+// ── Load GLTF house model ─────────────────────────────────────────────
+const gltfLoader = new GLTFLoader();
+gltfLoader.load('thesis_house_5-new-oct-threejs.gltf', gltf => {
+  const model = gltf.scene;
 
-// Foundation visible strip
-const foundation = box(6.6, 0.22, 3.4, 0x1f1f1f, 0, 0.11, 0);
-foundation.userData = { zone: 'foundation', label: 'Foundation (concrete)', tip: 'Freeze-thaw cycles expand water in micro-cracks, spalling and weakening the concrete over time.' };
+  // Normalize scale so the longest dimension is ~6.5 units
+  const bbox = new THREE.Box3().setFromObject(model);
+  const size = new THREE.Vector3();
+  bbox.getSize(size);
+  const scale = 6.5 / Math.max(size.x, size.y, size.z);
+  model.scale.setScalar(scale);
 
-// Roof
-const roof = gableRoof(6.8, 1.1, 3.5, 0x1a1a1a, 0, 1.8, 0);
-roof.userData = { zone: 'roof', label: 'Roof (asphalt shingle)', tip: 'Hail, wind, and UV degrade shingle granules. Severe storms accelerate loss.' };
+  // Sit the model on the ground plane, centered horizontally
+  bbox.setFromObject(model);
+  const center = new THREE.Vector3();
+  bbox.getCenter(center);
+  model.position.set(-center.x, -bbox.min.y, -center.z);
 
-// Chimney
-const chimney = box(0.4, 1.0, 0.4, 0x1e1a18, -1.8, 2.5, -0.6);
-chimney.userData = { zone: 'roof', label: 'Chimney', tip: 'Mortar joint degradation from temperature cycling.' };
+  model.traverse(child => {
+    if (!child.isMesh) return;
+    const n = child.name.toLowerCase();
+    child.castShadow = true;
+    child.receiveShadow = true;
 
-// Windows (front face z=-1.6)
-const winMat = new THREE.MeshLambertMaterial({ color: 0x0a1520, emissive: 0x061018, emissiveIntensity: 0.3 });
-const makeWindow = (x, y, z) => {
-  const m = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.65, 0.06), winMat);
-  m.position.set(x, y, z);
-  m.userData = { zone: 'windows', label: 'Windows', tip: 'Thermal bridging and seal failure increase with temperature extremes. Energy loss rises.' };
-  scene.add(m);
-  return m;
-};
-const windows = [
-  makeWindow(-1.8, 1.0, -1.64),
-  makeWindow( 0.6, 1.0, -1.64),
-  makeWindow( 2.1, 1.0, -1.64),
-];
+    if (n.includes('window')) {
+      child.material = windowMat;
+      child.userData = { zone: 'windows', label: 'Windows', tip: 'Thermal bridging and seal failure increase with temperature extremes. Energy loss rises.' };
+    } else if (n.includes('door')) {
+      child.material = doorMat;
+      child.userData = { zone: 'door', label: 'Door', tip: 'Wood frames degrade from moisture and temperature cycling.' };
+    } else if (n.includes('sweep') || n.includes('roof')) {
+      child.material = roofMat;
+      child.userData = { zone: 'roof', label: 'Roof (asphalt shingle)', tip: 'Hail, wind, and UV degrade shingle granules. Severe storms accelerate loss.' };
+    } else {
+      child.material = sidingMat;
+      child.userData = { zone: 'siding', label: 'Exterior siding (pine)', tip: 'Wood degradation from UV, moisture cycling, heat blistering, and freeze-thaw cracking.' };
+    }
+    hittable.push(child);
+  });
 
-// Door
-const doorMat = new THREE.MeshLambertMaterial({ color: 0x0f0b09 });
-const door = new THREE.Mesh(new THREE.BoxGeometry(0.75, 1.1, 0.06), doorMat);
-door.position.set(-0.6, 0.65, -1.64);
-scene.add(door);
-
-// Garage section (left extension — ranch houses often have attached garage)
-const garage = box(2.0, 1.5, 3.0, 0x2e2318, -4.2, 0.75, 0.1);
-garage.userData = { zone: 'siding', label: 'Garage (siding)', tip: 'Same painted pine siding — same degradation profile.' };
-const garageRoof = gableRoof(2.2, 0.7, 3.2, 0x181818, -4.2, 1.5, 0.1);
-garageRoof.userData = { zone: 'roof', label: 'Garage roof', tip: 'Roof structure shared with main house.' };
-const garageDoor = box(1.6, 1.0, 0.05, 0x151515, -4.2, 0.6, -1.51);
-
-// Trim / fascia
-box(6.5, 0.08, 0.04, 0x1c1412, 0, 1.8, -1.61);  // front fascia
-
-// Step
-box(1.0, 0.12, 0.4, 0x181818, -0.6, 0.06, -1.82);
+  scene.add(model);
+  loadMsg.remove();
+  update(currentIdx);
+}, undefined, err => console.error('GLTF load error:', err));
 
 // Raycasting
-const raycaster  = new THREE.Raycaster();
-const mouse      = new THREE.Vector2();
-const hittable   = [siding, foundation, roof, chimney, garage, garageRoof, ...windows];
-const tooltip    = document.getElementById('tooltip');
+const raycaster = new THREE.Raycaster();
+const mouse     = new THREE.Vector2();
+const tooltip   = document.getElementById('tooltip');
 
 renderer.domElement.addEventListener('mousemove', e => {
   const rect = renderer.domElement.getBoundingClientRect();
@@ -523,19 +490,13 @@ function update(idx) {
   const rt = d.roof  / 100;
   const ft = d.found / 100;
 
-  setMeshColor(siding,     sidingBaseColor(wt));
-  setMeshColor(garage,     sidingBaseColor(wt));
-  setMeshColor(roof,       stressColor(rt));
-  setMeshColor(garageRoof, stressColor(rt));
-  setMeshColor(chimney,    stressColor(rt * 0.9));
-  setMeshColor(foundation, stressColor(ft));
+  sidingMat.color.copy(sidingBaseColor(wt));
+  roofMat.color.copy(stressColor(rt));
 
   // Window glow: increases with energy cost stress
   const energyStress = Math.min(1, (d.energy - 1800) / 1200);
-  windows.forEach(w => {
-    w.material.emissiveIntensity = 0.15 + energyStress * 0.5;
-    w.material.emissive.setHex(energyStress > 0.5 ? 0x1a0800 : 0x061018);
-  });
+  windowMat.emissiveIntensity = 0.15 + energyStress * 0.5;
+  windowMat.emissive.setHex(energyStress > 0.5 ? 0x1a0800 : 0x061018);
 
   // Ground: greenish → drought-brown as heat increases
   const tempStress = Math.max(0, (raw.temp_mean - 49) / 8);
