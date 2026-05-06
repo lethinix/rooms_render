@@ -6,7 +6,7 @@ const ROOMS = [
   {
     id: 'past',
     label: 'The Past Room',
-    panorama: 'assets/pan_render_room1_5_0000_0001.png',
+    panorama: 'assets/re-render_room1.jpg',
     hotspots: [
       {
         id: 'books',
@@ -78,13 +78,13 @@ const ROOMS = [
   {
     id: 'present',
     label: 'The Present Room',
-    panorama: 'assets/pan_render_room2_1_0000_0001.png',
+    panorama: 'assets/re-render_room2.jpg',
     hotspots: []
   },
   {
     id: 'future',
     label: 'The Future Room',
-    panorama: 'assets/pan_render_room3_1_0000_0001.png',
+    panorama: 'assets/re-render_room3.jpg',
     screen: {
       src: 'assets/house_model.mov',
       opacity: 0.5,

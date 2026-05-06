@@ -1,4 +1,149 @@
 
+/* ── Entry / Landing screen ──────────────────────────────────────────────── */
+#entry-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #080809;
+  transition: opacity 0.55s ease, transform 0.55s ease;
+}
+#entry-screen.dismissed {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(1.03);
+}
+
+#entry-content {
+  text-align: center;
+  padding: 0 24px;
+  max-width: 560px;
+}
+
+.entry-eyebrow {
+  margin: 0 0 20px;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.entry-title {
+  margin: 0 0 18px;
+  font-size: clamp(2.4rem, 7vw, 4.2rem);
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  color: #fff;
+  line-height: 1.05;
+}
+
+.entry-subtitle {
+  margin: 0 0 44px;
+  font-size: 15px;
+  line-height: 1.65;
+  color: rgba(255,255,255,0.52);
+  font-weight: 300;
+}
+
+.entry-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.entry-btn {
+  font-family: inherit;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  padding: 12px 28px;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+  white-space: nowrap;
+}
+.entry-btn--ghost {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.22);
+  color: rgba(255,255,255,0.72);
+}
+.entry-btn--ghost:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.4);
+  color: #fff;
+}
+.entry-btn--primary {
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: #060607;
+  font-weight: 600;
+}
+.entry-btn--primary:hover {
+  background: #9af4d0;
+  border-color: #9af4d0;
+  box-shadow: 0 0 20px rgba(110,231,183,0.35);
+}
+
+/* About description panel (shown over entry screen) */
+.entry-about-panel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  background: rgba(8,8,9,0.96);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  text-align: center;
+  box-sizing: border-box;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.entry-about-panel.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.entry-about-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: transparent;
+  border: 0;
+  color: rgba(255,255,255,0.45);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 6px 10px;
+}
+.entry-about-close:hover { color: #fff; }
+.entry-about-heading {
+  margin: 0 0 20px;
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: #fff;
+}
+.entry-about-panel p {
+  margin: 0 0 1em;
+  font-size: 14px;
+  line-height: 1.7;
+  color: rgba(255,255,255,0.68);
+  max-width: 460px;
+}
+.entry-about-muted {
+  font-size: 12px !important;
+  color: var(--muted) !important;
+  letter-spacing: 0.06em;
+}
+
+/* App wrapper — always rendered; entry screen sits on top */
+#app { width: 100%; height: 100%; }
+
+/* ── Root variables ──────────────────────────────────────────────────────── */
 :root {
   --bg: #0b0b0d;
   --panel-bg: rgba(10,10,12,0.96);
@@ -118,18 +263,19 @@ audio { width:100%; }
   pointer-events: auto;
 }
 .room-btn {
-  background: rgba(10,10,12,0.78);
+  background: rgba(10,10,12,0.88);
   border: 1px solid rgba(255,255,255,0.12);
   color: var(--muted);
   font-family: Inter, Roboto, system-ui, sans-serif;
   font-size: 13px;
+  font-weight: 500;
   padding: 8px 16px;
   border-radius: 20px;
   cursor: pointer;
   transition: background .18s, color .18s, border-color .18s;
   white-space: nowrap;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 .room-btn:hover:not(:disabled) {
   background: rgba(110,231,183,0.12);
@@ -137,7 +283,7 @@ audio { width:100%; }
   color: #fff;
 }
 .room-btn.active {
-  background: rgba(110,231,183,0.15);
+  background: rgba(20,48,38,0.96);
   border-color: var(--accent);
   color: var(--accent);
 }
@@ -265,4 +411,29 @@ audio { width:100%; }
 
   /* Tighten WIP badge slightly */
   .wip-badge { font-size: 11px; padding: 5px 9px; }
+
+  /* Entry screen — tighter vertical rhythm on small screens */
+  #entry-content { padding: 0 20px; }
+  .entry-eyebrow { margin-bottom: 14px; }
+  .entry-title { margin-bottom: 14px; }
+  .entry-subtitle { margin-bottom: 32px; font-size: 14px; }
+  .entry-btn { padding: 13px 24px; font-size: 13px; }
+
+  /* About panel — less top/bottom padding, scrollable */
+  .entry-about-panel { padding: 60px 20px 32px; justify-content: flex-start; }
+  .entry-about-heading { font-size: 16px; margin-bottom: 14px; }
+  .entry-about-panel p { font-size: 13px; }
+}
+
+/* Touch active state for entry buttons (hover doesn't fire on touch) */
+@media (hover: none) {
+  .entry-btn--ghost:active {
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.4);
+    color: #fff;
+  }
+  .entry-btn--primary:active {
+    background: #9af4d0;
+    box-shadow: 0 0 20px rgba(110,231,183,0.35);
+  }
 }

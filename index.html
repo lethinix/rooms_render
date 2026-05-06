@@ -1,34 +1,93 @@
-<!-- // ...existing code... -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>2110 Blue Lawn Road — 360° Room (Past Room)</title>
-
-  <!-- link to external stylesheet -->
+  <title>2110 Blue Lawn Road</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="container" aria-label="360 room viewer"></div>
-  <div class="hint"><span class="hint-nav">Drag or touch to look around · Pinch to zoom · </span><span class="legend-dot"></span> tap to open</div>
-  <div class="wip-badge">site in progress</div>
 
-  <!-- Overlay panels -->
-  <div id="overlay" class="overlay" role="dialog" aria-hidden="true">
-    <div class="panel" role="document">
-      <div class="header">
-        <h2 id="panel-title">Title</h2>
-        <button id="closeBtn" class="close" aria-label="Close panel">✕</button>
+  <!-- Entry screen -->
+  <div id="entry-screen">
+    <div id="entry-content">
+      <p class="entry-eyebrow">Iowa City, Iowa &nbsp;·&nbsp; 2110 Blue Lawn Road</p>
+      <h1 class="entry-title">welcome to 2110</h1>
+      <p class="entry-subtitle">A thesis installation tracing one house across geological time, colonial history, and an uncertain climate future.</p>
+      <div class="entry-actions">
+        <button id="entry-about-btn" class="entry-btn entry-btn--ghost">about</button>
+        <button id="entry-enter-btn" class="entry-btn entry-btn--primary">open project</button>
       </div>
-      <div class="content" id="panel-content">
-        <!-- content injected -->
+    </div>
+    <!-- About description panel inside entry screen -->
+    <div id="entry-about" class="entry-about-panel" aria-hidden="true">
+      <button id="entry-about-close" class="entry-about-close" aria-label="Close">✕</button>
+      <h2 class="entry-about-heading">about this work</h2>
+      <p>
+        <em>2110</em> is a thesis installation examining 2110 Blue Lawn Road, Iowa City — a mid-century ranch house — through deep time. The work moves backward through 375 million years of geology, Indigenous land stewardship, colonial dispossession, and the modern housing market, then projects forward to the year 2110 using climate modeling under the IPCC's SSP2-4.5 scenario.
+      </p>
+      <p>
+        The installation is structured as three rooms: <strong>The Past Room</strong>, which holds archival documents, audio, and ecological footage; <strong>The Present Room</strong>, a portrait of the house today; and <strong>The Future Room</strong>, where a climate model runs live on the wall screen, speculating on what the house — and the idea of home — might become.
+      </p>
+      <p class="entry-about-muted">
+        Thesis — Parsons School of Design, 2025 &nbsp;·&nbsp; site in progress
+      </p>
+      <button id="entry-about-enter" class="entry-btn entry-btn--primary" style="margin-top:1.5rem;">open project</button>
+    </div>
+  </div>
+
+  <!-- Main experience (rendered behind entry screen) -->
+  <div id="app">
+    <div id="container" aria-label="360 room viewer"></div>
+    <div class="hint"><span class="hint-nav">Drag or touch to look around · Pinch to zoom · </span><span class="legend-dot"></span> tap to open</div>
+    <div class="wip-badge">site in progress</div>
+
+    <!-- Overlay panels -->
+    <div id="overlay" class="overlay" role="dialog" aria-hidden="true">
+      <div class="panel" role="document">
+        <div class="header">
+          <h2 id="panel-title">Title</h2>
+          <button id="closeBtn" class="close" aria-label="Close panel">✕</button>
+        </div>
+        <div class="content" id="panel-content">
+          <!-- content injected -->
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- module script now in rooms.js -->
   <script type="module" src="rooms.js"></script>
+
+  <script>
+    (function () {
+      const entryScreen  = document.getElementById('entry-screen');
+      const app          = document.getElementById('app');
+      const aboutPanel   = document.getElementById('entry-about');
+      const aboutBtn     = document.getElementById('entry-about-btn');
+      const aboutClose   = document.getElementById('entry-about-close');
+      const enterBtn     = document.getElementById('entry-enter-btn');
+      const aboutEnter   = document.getElementById('entry-about-enter');
+
+      function openAbout() {
+        aboutPanel.removeAttribute('aria-hidden');
+        aboutPanel.classList.add('visible');
+      }
+      function closeAbout() {
+        aboutPanel.setAttribute('aria-hidden', 'true');
+        aboutPanel.classList.remove('visible');
+      }
+      function enterProject() {
+        entryScreen.classList.add('dismissed');
+        // app is always rendered; entry screen just sat on top
+        // Remove entry screen from DOM after animation
+        entryScreen.addEventListener('transitionend', () => entryScreen.remove(), { once: true });
+      }
+
+      aboutBtn.addEventListener('click', openAbout);
+      aboutClose.addEventListener('click', closeAbout);
+      enterBtn.addEventListener('click', enterProject);
+      aboutEnter.addEventListener('click', enterProject);
+    })();
+  </script>
 </body>
 </html>
-<!-- // ...existing code... -->
