@@ -466,6 +466,20 @@ function openPanel(h) {
       <p class="muted">Audio artifact from the Past Room</p>
       <audio id="audioPlayer" controls preload="none"><source src="${h.content}" /></audio>
     </div>`;
+    setTimeout(() => {
+      const el = document.getElementById('audioPlayer');
+      if (!el) return;
+      try {
+        const AC = window.AudioContext || /** @type {any} */(window).webkitAudioContext;
+        const ctx = new AC();
+        const src = ctx.createMediaElementSource(el);
+        const gain = ctx.createGain();
+        gain.gain.value = 3.0;
+        src.connect(gain);
+        gain.connect(ctx.destination);
+        if (ctx.state === 'suspended') ctx.resume();
+      } catch(e) {}
+    }, 50);
   } else if (h.type === 'video') {
     const ext = h.content.split('.').pop().toLowerCase();
     if (['png','jpg','jpeg','webp'].includes(ext)) {
@@ -478,7 +492,6 @@ function openPanel(h) {
   }
   overlay.classList.add('active');
   overlay.setAttribute('aria-hidden', 'false');
-  if (IS_TOUCH) { audioBtn.style.visibility = 'hidden'; audioBtn.style.pointerEvents = 'none'; }
 }
 
 closeBtn.addEventListener('click', closePanel);
@@ -488,7 +501,6 @@ function closePanel() {
   overlay.setAttribute('aria-hidden', 'true');
   document.getElementById('audioPlayer')?.pause();
   document.getElementById('videoPlayer')?.pause();
-  if (IS_TOUCH) { audioBtn.style.visibility = ''; audioBtn.style.pointerEvents = ''; }
 }
 window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePanel(); });
 
