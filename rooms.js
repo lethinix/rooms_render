@@ -385,7 +385,6 @@ function onPointerDown(event) {
   }
 }
 renderer.domElement.addEventListener('pointerdown', onPointerDown, { passive: true });
-renderer.domElement.addEventListener('touchstart',  onPointerDown, { passive: true });
 
 function onPointerMove(event) {
   const clientX = event.clientX, clientY = event.clientY;
