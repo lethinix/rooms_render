@@ -618,7 +618,7 @@ function updateCoordsFromPointer(clientX, clientY) {
 
 // ── Background audio ─────────────────────────────────────────────────────────
 const bgAudio = document.createElement('audio');
-bgAudio.src    = 'assets/Perkins%20Ln%20W.m4a';
+bgAudio.src    = 'assets/thesis_time_audio.mp4';
 bgAudio.loop   = true;
 bgAudio.volume = 0.22;
 
