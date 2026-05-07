@@ -22,23 +22,15 @@ html,body{margin:0;padding:0;background:#0d0d0d;overflow-x:hidden;overflow-y:aut
   var l=document.getElementById('page-loader');
   if(l){l.classList.add('hidden');setTimeout(function(){l.remove()},450);}
   if(window.Plotly && window.innerWidth<=768){
-    var d=document.querySelector('.plotly-graph-div');
-    if(d){
-      var h=Math.round(window.innerHeight*3.4);
-      Plotly.relayout(d,{
-        height:h,
-        autosize:true,
-        'legend.orientation':'h',
-        'legend.x':0,
-        'legend.y':-0.015,
-        'legend.xanchor':'left',
-        'legend.font.size':9,
-        'margin.l':52,
-        'margin.r':8,
-        'margin.t':48,
-        'margin.b':20,
-        'title.font.size':12
-      });
+    var gd=document.querySelector('.plotly-graph-div');
+    if(gd && gd.data && gd.layout){
+      var lay=gd.layout;
+      lay.height=Math.round(window.innerHeight*2.4);
+      lay.autosize=true;
+      lay.legend={orientation:'h',x:0,y:-0.01,xanchor:'left',font:{size:9,color:'white'},bgcolor:'rgba(30,30,30,0.8)',bordercolor:'#444'};
+      lay.margin={l:52,r:8,t:44,b:16};
+      lay.title={text:lay.title&&lay.title.text?lay.title.text:'',font:{color:'white',size:11},x:0.5};
+      Plotly.react(gd,gd.data,lay,{staticPlot:true,responsive:true,displayModeBar:false});
     }
   }
 });</script>
