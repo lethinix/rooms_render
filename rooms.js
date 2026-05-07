@@ -324,9 +324,10 @@ function buildScreenVideo({ src, corners, opacity = 0.5 }) {
 function clearHotspots() {
   hotspotObjects.forEach(s => scene.remove(s));
   labelElements.forEach(item => { item.el.remove(); });
-  hotspotObjects  = [];
-  labelElements   = [];
-  currentHotspots = [];
+  hotspotObjects    = [];
+  labelElements     = [];
+  currentHotspots   = [];
+  revealedHotspotId = null;
 }
 
 function buildHotspots(hotspots) {
@@ -344,7 +345,8 @@ function buildHotspots(hotspots) {
 
     const label = document.createElement('div');
     label.className = 'hotspot-label';
-    label.innerHTML = `<div style="font-weight:600">${h.title.split('—')[0].trim()}</div><div class="muted">${h.title.split('—')[1]?.trim() || ''}</div>`;
+    const sub = h.title.split('—')[1]?.trim() || '';
+    label.innerHTML = `<div style="font-weight:600">${h.title.split('—')[0].trim()}</div>${sub ? `<div class="muted">${sub}</div>` : ''}<div class="label-tap-hint">tap again to open</div>`;
     container.appendChild(label);
 
     labelElements.push({ el: label, data: h, obj: sprite });
@@ -355,6 +357,7 @@ function buildHotspots(hotspots) {
 const raycaster = new THREE.Raycaster();
 const pointer   = new THREE.Vector2();
 let hoveredHotspotId = null;
+let revealedHotspotId = null;
 
 function onPointerDown(event) {
   const rect = renderer.domElement.getBoundingClientRect();
@@ -367,11 +370,18 @@ function onPointerDown(event) {
   if (hit) {
     const h = currentHotspots.find(x => x.id === hit.object.name);
     if (!h) return;
+    if (IS_TOUCH && revealedHotspotId !== h.id) {
+      revealedHotspotId = h.id;
+      return;
+    }
+    revealedHotspotId = null;
     if (h.type === 'link') {
       showLinkLoader(h.loadingText || 'loading...', h.url);
     } else {
       openPanel(h);
     }
+  } else if (IS_TOUCH) {
+    revealedHotspotId = null;
   }
 }
 renderer.domElement.addEventListener('pointerdown', onPointerDown, { passive: true });
@@ -408,7 +418,7 @@ function updateLabels() {
     item.el.style.left    = `${sx}px`;
     item.el.style.top     = `${sy}px`;
     const onScreen = vec.z < 1 && vec.z > -1 && Math.abs(vec.x) < 1.2 && Math.abs(vec.y) < 1.2;
-    item.el.classList.toggle('visible', onScreen && (hoveredHotspotId === item.data.id || IS_TOUCH));
+    item.el.classList.toggle('visible', onScreen && (hoveredHotspotId === item.data.id || revealedHotspotId === item.data.id));
   });
 }
 
