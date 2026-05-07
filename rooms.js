@@ -367,6 +367,12 @@ function buildHotspots(hotspots) {
     label.className = 'hotspot-label';
     const sub = h.title.split('—')[1]?.trim() || '';
     label.innerHTML = `<div style="font-weight:600">${h.title.split('—')[0].trim()}</div>${sub ? `<div class="muted">${sub}</div>` : ''}<div class="label-tap-hint">tap again to open</div>`;
+    label.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      revealedHotspotId = null;
+      if (h.type === 'link') showLinkLoader(h.loadingText || 'loading...', h.url);
+      else openPanel(h);
+    });
     container.appendChild(label);
 
     labelElements.push({ el: label, data: h, obj: sprite });
@@ -472,6 +478,7 @@ function openPanel(h) {
   }
   overlay.classList.add('active');
   overlay.setAttribute('aria-hidden', 'false');
+  if (IS_TOUCH) { audioBtn.style.visibility = 'hidden'; audioBtn.style.pointerEvents = 'none'; }
 }
 
 closeBtn.addEventListener('click', closePanel);
@@ -481,6 +488,7 @@ function closePanel() {
   overlay.setAttribute('aria-hidden', 'true');
   document.getElementById('audioPlayer')?.pause();
   document.getElementById('videoPlayer')?.pause();
+  if (IS_TOUCH) { audioBtn.style.visibility = ''; audioBtn.style.pointerEvents = ''; }
 }
 window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePanel(); });
 

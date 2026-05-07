@@ -513,7 +513,27 @@ audio { width:100%; }
 }
 
 @media (max-width:640px) {
-  .panel { width:96%; }
+  /* Panel as bottom sheet */
+  .overlay { align-items: flex-end; }
+  .panel {
+    width: 100%;
+    max-height: 84vh;
+    border-radius: 16px 16px 0 0;
+    transform: translateY(24px);
+  }
+  .overlay.active .panel { transform: translateY(0); }
+
+  /* Tighter panel internals */
+  .panel .header { padding: 12px 16px; }
+  .panel h2 { font-size: 14px; }
+  .panel .content { padding: 14px 16px; }
+
+  /* Cap video height so it doesn't fill the whole sheet */
+  video { max-height: 36vh; object-fit: contain; }
+
+  /* Text scroll takes remaining sheet height */
+  .text-scroll { max-height: 62vh; font-size: 14px; }
+
   .hotspot-label { font-size:12px; padding:6px; }
 
   /* Shrink nav buttons so they fit without reaching the audio button */
