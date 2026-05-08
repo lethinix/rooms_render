@@ -9,7 +9,7 @@ const ROOMS = [
   {
     id: 'past',
     label: 'The Past Room',
-    panorama: 'assets/room1_edited.png',
+    panorama: 'assets/room1_new5.png',
     initialView: { theta: -3.2, phi: -23.3 },
     hotspots: [
       {
