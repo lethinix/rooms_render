@@ -9,7 +9,7 @@ const ROOMS = [
   {
     id: 'past',
     label: 'The Past Room',
-    panorama: 'assets/room1_new5.png',
+    panorama: 'assets/room1_new7.png',
     initialView: { theta: -3.2, phi: -23.3 },
     hotspots: [
       {
@@ -76,7 +76,7 @@ const ROOMS = [
   {
     id: 'present',
     label: 'The Present Room',
-    panorama: 'assets/room2_edited.png',
+    panorama: 'assets/room2_new3.png',
     initialView: { theta: -3.2, phi: -23.3 },
     hotspots: [
       {
@@ -96,7 +96,7 @@ const ROOMS = [
   {
     id: 'future',
     label: 'The Future Room',
-    panorama: 'assets/room3_edited.png',
+    panorama: 'assets/room3_new.png',
     initialView: { theta: -3.2, phi: -23.3 },
     screen: {
       src: 'assets/house_model.mov',
