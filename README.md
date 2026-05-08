@@ -3,6 +3,8 @@
 a thesis installation by aisha kazembe  
 parsons school of design, 2025
 
+**live:** https://2110-rooms.netlify.app/
+
 ---
 
 **2110** examines a single address — 2110 blue lawn road, iowa city, iowa — across the full arc of geological and human time. it moves backward through 375 million years of paleoclimate, indigenous land stewardship, colonial dispossession, and the american housing market, then projects forward to the year 2110 using climate modeling under the ipcc's ssp2-4.5 scenario.
