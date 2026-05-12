@@ -13,7 +13,7 @@
     <div id="entry-content">
       <p class="entry-eyebrow">2110 Blue Lawn Road</p>
       <h1 class="entry-title">welcome to 2110</h1>
-      <p class="entry-subtitle">A thesis installation following one house across geological time, colonial history, and an uncertain climate future.</p>
+      <p class="entry-subtitle">A thesis installation following one house across geological time, urban development, and an uncertain climate future.</p>
       <div class="entry-actions">
         <button id="entry-about-btn" class="entry-btn entry-btn--ghost">about</button>
         <button id="entry-enter-btn" class="entry-btn entry-btn--primary">open project</button>
@@ -27,10 +27,19 @@
         <em>2110</em> is a thesis installation examining 2110 Blue Lawn Road, the address of a house in the American midwest. It's a mid-century ranch house with a story that moves deep through time. The work moves backward through 400 million years of geology, Indigenous land stewardship, colonial transformations, and the modern housing market. Then it projects forward to the year 2110 using climate modeling under the IPCC's SSP2-4.5 scenario.
       </p>
       <p>
-        The installation is structured as three rooms: <strong>The Past Room</strong>, which holds archival documents, audio, and ecological footage; <strong>The Present Room</strong>, a portrait of the house today; and <strong>The Future Room</strong>, where a climate model runs live on the wall screen, speculating on what the house--and the idea of home--might become. 
+        The installation is structured as three rooms: <strong>The Past Room</strong>, which holds archival documents, audio, and ecological footage; <strong>The Present Room</strong>, a portrait of the house today; and <strong>The Future Room</strong>, where a climate model runs live on the wall screen, speculating on what the house--and the idea of home--might become.
       </p>
-      <p>Welcome to 2110.
-      </p>
+      <p>Welcome to 2110.</p>
+
+      <p class="entry-about-label">the problem</p>
+      <p>Climate change is accelerating material degradation, insurance market withdrawal, and financial risk for property owners. Most risk assessments remain regional and abstract. This project asks what it looks like to assess climate risk at the scale of a single address.</p>
+
+      <p class="entry-about-label">methods</p>
+      <p>The climate model draws on ERA5 reanalysis data (1940-present), CMIP6 multi-model ensemble outputs (EC-Earth3P-HR, MPI-ESM1-2-XR, MRI-AGCM3-2-S), and IPCC AR6 delta-scaling under SSP2-4.5, the "middle of the road" emissions scenario used in most near-term adaptation planning. A physics-based materials degradation framework translates climate projections into property-specific maintenance cost trajectories and structural vulnerability estimates.</p>
+
+      <p class="entry-about-label">applications</p>
+      <p>The methodology is applicable to insurance underwriting, real estate due diligence, and adaptive building management, wherever a property's climate risk needs to be understood at the scale of the structure rather than the region.</p>
+
       <p class="entry-about-muted">
         Thesis &nbsp;·&nbsp; Parsons School of Design, 2026 &nbsp;·&nbsp; site in progress
       </p>
@@ -43,6 +52,43 @@
     <div id="container" aria-label="360 room viewer"></div>
     <div class="hint"><span class="hint-nav">Drag or touch to look around · Pinch to zoom · </span><span class="legend-dot"></span> tap to open</div>
     <div class="wip-badge">site in progress</div>
+
+    <!-- Table of contents -->
+    <button id="toc-btn" aria-label="Table of contents" aria-expanded="false">contents</button>
+    <div id="toc-panel" aria-hidden="true">
+      <div class="toc-header">
+        <span class="toc-title">contents</span>
+        <button id="toc-close" aria-label="Close contents">✕</button>
+      </div>
+      <nav class="toc-nav">
+        <div class="toc-section">
+          <div class="toc-room-label">the past room</div>
+          <ul>
+            <li><button class="toc-item" data-room="0" data-hotspot="books">Land History</button></li>
+            <li><button class="toc-item" data-room="0" data-hotspot="radio">Audio Archive</button></li>
+            <li><button class="toc-item" data-room="0" data-hotspot="tv">Visual Artifact</button></li>
+            <li><button class="toc-item" data-room="0" data-hotspot="video1">Window: Wagtail</button></li>
+            <li><button class="toc-item" data-room="0" data-hotspot="video2">Window: Harebells</button></li>
+            <li><button class="toc-item" data-room="0" data-hotspot="video3">Window: Plant Sways</button></li>
+            <li><button class="toc-item" data-room="0" data-hotspot="video4">Window: Field</button></li>
+          </ul>
+        </div>
+        <div class="toc-section">
+          <div class="toc-room-label">the present room</div>
+          <ul>
+            <li><button class="toc-item" data-room="1" data-hotspot="books2">Book 2 — The Present</button></li>
+          </ul>
+        </div>
+        <div class="toc-section">
+          <div class="toc-room-label">the future room</div>
+          <ul>
+            <li><button class="toc-item" data-room="2" data-hotspot="books3">Book 3 — The Future</button></li>
+            <li><button class="toc-item toc-item--link" data-room="2" data-hotspot="screen-left">Climate Projection ↗</button></li>
+            <li><button class="toc-item toc-item--link" data-room="2" data-hotspot="screen-right">House Impact Model ↗</button></li>
+          </ul>
+        </div>
+      </nav>
+    </div>
 
     <!-- Overlay panels -->
     <div id="overlay" class="overlay" role="dialog" aria-hidden="true">
@@ -89,6 +135,35 @@
       aboutClose.addEventListener('click', closeAbout);
       enterBtn.addEventListener('click', enterProject);
       aboutEnter.addEventListener('click', enterProject);
+
+      // ── Table of contents ──────────────────────────────────────────────────
+      const tocBtn   = document.getElementById('toc-btn');
+      const tocPanel = document.getElementById('toc-panel');
+      const tocClose = document.getElementById('toc-close');
+
+      function openToc() {
+        tocPanel.removeAttribute('aria-hidden');
+        tocPanel.classList.add('open');
+        tocBtn.setAttribute('aria-expanded', 'true');
+      }
+      function closeToc() {
+        tocPanel.setAttribute('aria-hidden', 'true');
+        tocPanel.classList.remove('open');
+        tocBtn.setAttribute('aria-expanded', 'false');
+      }
+
+      tocBtn.addEventListener('click', () => tocPanel.classList.contains('open') ? closeToc() : openToc());
+      tocClose.addEventListener('click', closeToc);
+      tocPanel.addEventListener('click', (e) => { if (e.target === tocPanel) closeToc(); });
+
+      document.querySelectorAll('.toc-item').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const roomIdx  = parseInt(btn.dataset.room, 10);
+          const hotspot  = btn.dataset.hotspot;
+          closeToc();
+          if (window.__2110goto) window.__2110goto(roomIdx, hotspot);
+        });
+      });
     })();
   </script>
 </body>

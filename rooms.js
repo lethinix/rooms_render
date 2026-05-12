@@ -279,10 +279,11 @@ function makeDotTexture() {
 }
 const dotTexture = makeDotTexture();
 
-let hotspotObjects  = [];
-let labelElements   = [];
-let currentHotspots = [];
-let screenMeshes    = [];
+let hotspotObjects    = [];
+let labelElements     = [];
+let currentHotspots   = [];
+let screenMeshes      = [];
+let pendingHotspotOpen = null;
 
 function clearScreenMeshes() {
   screenMeshes.forEach(m => {
@@ -352,6 +353,16 @@ function clearHotspots() {
 
 function buildHotspots(hotspots) {
   currentHotspots = hotspots;
+  if (pendingHotspotOpen) {
+    const id = pendingHotspotOpen;
+    pendingHotspotOpen = null;
+    setTimeout(() => {
+      const h = currentHotspots.find(x => x.id === id);
+      if (!h) return;
+      if (h.type === 'link') showLinkLoader(h.loadingText || 'loading...', h.url);
+      else openPanel(h);
+    }, 120);
+  }
   hotspots.forEach(h => {
     const pos = sphericalToVector(498, h.theta, h.phi);
     const mat = new THREE.SpriteMaterial({ map: dotTexture, transparent: true, depthTest: false });
@@ -631,6 +642,18 @@ function showLinkLoader(text, url) {
   window.open(url, '_blank', 'noopener');
   setTimeout(() => linkLoaderEl.classList.remove('active'), 2800);
 }
+
+window.__2110goto = function(roomIdx, hotspotId) {
+  if (roomIdx === currentRoomIdx) {
+    const h = currentHotspots.find(x => x.id === hotspotId);
+    if (!h) return;
+    if (h.type === 'link') showLinkLoader(h.loadingText || 'loading...', h.url);
+    else openPanel(h);
+  } else {
+    pendingHotspotOpen = hotspotId;
+    switchRoom(roomIdx);
+  }
+};
 
 // ── Theta/phi HUD (follows cursor) ───────────────────────────────────────────
 const coordHUD = document.createElement('div');
