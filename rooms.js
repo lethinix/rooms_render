@@ -510,6 +510,9 @@ function openPanel(h) {
           const seek = () => { vid.currentTime = h.startTime; };
           if (vid.readyState >= 1) seek();
           else vid.addEventListener('loadedmetadata', seek, { once: true });
+          vid.addEventListener('play', () => {
+            if (!userPausedBg) bgAudio.play().catch(() => {});
+          });
           if (h.endTime != null) {
             vid.addEventListener('timeupdate', () => {
               if (vid.currentTime >= h.endTime) {
@@ -736,8 +739,10 @@ function syncAudioBtn() {
 }
 syncAudioBtn();
 
+let userPausedBg = false;
 audioBtn.addEventListener('click', () => {
-  bgAudio.paused ? bgAudio.play() : bgAudio.pause();
+  if (bgAudio.paused) { userPausedBg = false; bgAudio.play(); }
+  else                { userPausedBg = true;  bgAudio.pause(); }
 });
 bgAudio.addEventListener('play',  syncAudioBtn);
 bgAudio.addEventListener('pause', syncAudioBtn);
