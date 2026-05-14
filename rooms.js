@@ -38,38 +38,42 @@ const ROOMS = [
       },
       {
         id: 'tv',
-        title: 'TV — Visual Artifact',
+        title: 'Video 1 - Glaciers and Oceans',
         theta: 19.7, phi: -37.3,
         type: 'video',
-        content: 'assets/tv_video.mp4'
+        content: 'assets/glacial_script.mp4'
       },
       {
         id: 'video1',
-        title: 'Window 1 — Wagtail',
+        title: 'Window 1',
         theta: -18.7, phi: -26.5,
         type: 'video',
-        content: 'assets/wagtail.mp4'
+        content: 'assets/prarie_script.mp4',
+        startTime: 0, endTime: 61, nextHotspotId: 'video2'
       },
       {
         id: 'video2',
-        title: 'Window 2 — Harebells',
+        title: 'Window 2',
         theta: -7.3, phi: -25.8,
         type: 'video',
-        content: 'assets/harebells.mp4'
+        content: 'assets/prarie_script.mp4',
+        startTime: 59, endTime: 122, nextHotspotId: 'video3'
       },
       {
         id: 'video3',
-        title: 'Window 3 — Plant Sways',
+        title: 'Window 3',
         theta: 6.0, phi: -25.4,
         type: 'video',
-        content: 'assets/plant_sways.mp4'
+        content: 'assets/prarie_script.mp4',
+        startTime: 108, endTime: 239, nextHotspotId: 'video4'
       },
       {
         id: 'video4',
-        title: 'Window 4 — Field',
+        title: 'Window 4',
         theta: 18.8, phi: -26.5,
         type: 'video',
-        content: 'assets/field.mp4'
+        content: 'assets/prarie_script.mp4',
+        startTime: 240, endTime: 318
       }
     ]
   },
@@ -499,6 +503,34 @@ function openPanel(h) {
       panelContent.innerHTML = `<div class="media">
         <video id="videoPlayer" controls playsinline preload="metadata"><source src="${h.content}" /></video>
       </div>`;
+      if (h.startTime != null) {
+        setTimeout(() => {
+          const vid = document.getElementById('videoPlayer');
+          if (!vid) return;
+          const seek = () => { vid.currentTime = h.startTime; };
+          if (vid.readyState >= 1) seek();
+          else vid.addEventListener('loadedmetadata', seek, { once: true });
+          if (h.endTime != null) {
+            vid.addEventListener('timeupdate', () => {
+              if (vid.currentTime >= h.endTime) {
+                vid.pause();
+                vid.currentTime = h.endTime;
+                if (h.nextHotspotId && !document.getElementById('next-video-btn')) {
+                  const btn = document.createElement('button');
+                  btn.id = 'next-video-btn';
+                  btn.className = 'next-video-btn';
+                  btn.textContent = 'next video';
+                  btn.addEventListener('click', () => {
+                    const next = currentHotspots.find(x => x.id === h.nextHotspotId);
+                    if (next) openPanel(next);
+                  });
+                  vid.closest('.media').appendChild(btn);
+                }
+              }
+            });
+          }
+        }, 0);
+      }
     }
   }
   overlay.classList.add('active');
