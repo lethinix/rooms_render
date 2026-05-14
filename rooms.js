@@ -536,8 +536,11 @@ function openPanel(h) {
       }
     }
   }
+  const panelEl = overlay.querySelector('.panel');
+  panelEl.classList.toggle('panel--video', h.type === 'video');
   overlay.classList.add('active');
   overlay.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
 }
 
 closeBtn.addEventListener('click', closePanel);
@@ -547,6 +550,7 @@ function closePanel() {
   overlay.setAttribute('aria-hidden', 'true');
   document.getElementById('audioPlayer')?.pause();
   document.getElementById('videoPlayer')?.pause();
+  document.body.style.overflow = '';
 }
 window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePanel(); });
 
