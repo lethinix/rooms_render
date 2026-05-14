@@ -537,7 +537,7 @@ function openPanel(h) {
     }
   }
   const panelEl = overlay.querySelector('.panel');
-  panelEl.classList.toggle('panel--video', h.type === 'video');
+  panelEl.classList.toggle('panel--video', h.type === 'video' && IS_TOUCH);
   overlay.classList.add('active');
   overlay.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
