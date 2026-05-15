@@ -282,6 +282,11 @@
   #toc-btn { bottom: 100px; }
 }
 
+/* iPad landscape — nudge contents button above the hint label */
+@media (min-width: 768px) and (orientation: landscape) {
+  #toc-btn { bottom: 80px; }
+}
+
 /* App wrapper — always rendered; entry screen sits on top */
 #app { width: 100%; height: 100%; }
 
