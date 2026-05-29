@@ -29,13 +29,13 @@ const ROOMS = [
       <p>Some of the earliest maps of urbanization in Iowa City come from insurance companies. The Sanborn Fire Maps, created to help insurers assess liability in urbanized areas, documented building layouts, materials, and risk in unprecedented detail. They are an early version of something this project returns to at the end: the relationship between home, risk, and who bears the cost of both.</p>
     </div>`
       },
-      {
-        id: 'radio',
-        title: 'Radio — Audio Archive',
-        theta: -7.6, phi: -34.3,
-        type: 'audio',
-        content: 'assets/The Past Room Pt 2.m4a'
-      },
+      // {
+      //   id: 'radio',
+      //   title: 'Radio — Audio Archive',
+      //   theta: -7.6, phi: -34.3,
+      //   type: 'audio',
+      //   content: 'assets/The Past Room Pt 2.m4a'
+      // },
       {
         id: 'tv',
         title: 'Video 1 - Glaciers and Oceans',
