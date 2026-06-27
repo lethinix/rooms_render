@@ -32,7 +32,7 @@
     justify-content:space-between; align-items:center;
     border-bottom:1px solid #161616; flex-shrink:0;
   }
-  #header h1 { font-size:0.68rem; letter-spacing:0.22em; color:#444; font-weight:normal; }
+  #header h1 { font-size:0.68rem; letter-spacing:0.22em; color:#888; font-weight:normal; }
   #year-display { font-size:3.4rem; font-weight:200; letter-spacing:0.06em; color:#fff; line-height:1; }
   #main { display:flex; flex:1; overflow:hidden; }
   #canvas-container { flex:1; position:relative; }
@@ -51,17 +51,17 @@
   }
   .card-label {
     font-size:0.58rem; letter-spacing:0.22em;
-    color:#444; text-transform:uppercase; margin-bottom:8px;
+    color:#888; text-transform:uppercase; margin-bottom:8px;
   }
   .card-value { font-size:2rem; font-weight:200; color:#eee; line-height:1; }
-  .card-unit  { font-size:0.75rem; color:#444; margin-left:3px; }
-  .card-sub   { font-size:0.65rem; color:#383838; margin-top:5px; }
+  .card-unit  { font-size:0.75rem; color:#888; margin-left:3px; }
+  .card-sub   { font-size:0.65rem; color:#666; margin-top:5px; }
 
   /* damage bars */
   .bar-row { margin-bottom:9px; }
   .bar-header {
     display:flex; justify-content:space-between;
-    font-size:0.62rem; color:#444; margin-bottom:4px;
+    font-size:0.62rem; color:#888; margin-bottom:4px;
   }
   .bar-track {
     height:5px; background:#191919; border-radius:2px; overflow:hidden;
@@ -73,8 +73,11 @@
 
   /* legend */
   .legend { display:flex; flex-direction:column; gap:6px; margin-top:4px; }
-  .legend-item { display:flex; align-items:center; gap:8px; font-size:0.6rem; color:#444; }
+  .legend-item { display:flex; align-items:center; gap:8px; font-size:0.6rem; color:#888; }
   .legend-swatch { width:10px; height:10px; border-radius:1px; flex-shrink:0; }
+
+  /* left column wrapper */
+  #left-col { flex:1; display:flex; flex-direction:column; overflow:hidden; min-width:0; }
 
   /* controls */
   #controls {
@@ -98,7 +101,7 @@
     border-radius:50%; background:#fff; cursor:pointer;
     box-shadow:0 0 6px rgba(255,255,255,0.2);
   }
-  #slider-label { font-size:0.62rem; color:#333; min-width:70px; text-align:right; }
+  #slider-label { font-size:0.62rem; color:#888; min-width:70px; text-align:right; }
 
   /* tooltip */
   #tooltip {
@@ -108,18 +111,58 @@
     display:none; z-index:200; line-height:1.8; color:#bbb;
     border-radius:2px;
   }
-  #source { font-size:0.5rem; color:#252525; line-height:1.7; }
+  #source { font-size:0.5rem; color:#444; line-height:1.7; }
 
   /* scenario badge */
   #scenario-badge {
     position:absolute; top:14px; left:14px;
     font-size:0.55rem; letter-spacing:0.18em;
-    color:#2a2a2a; pointer-events:none;
+    color:rgba(255,255,255,0.25); pointer-events:none;
   }
+
+  /* nav bar */
+  #nav-bar{display:flex;align-items:center;gap:12px;padding:10px 20px;border-bottom:1px solid rgba(255,255,255,0.05);flex-shrink:0;background:#070707}
+  #back-btn{background:none;border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.5);font-size:11px;letter-spacing:0.08em;padding:5px 12px;border-radius:12px;cursor:pointer;font-family:inherit;transition:border-color .15s,color .15s}
+  #back-btn:hover{border-color:rgba(110,231,183,0.4);color:#6ee7b7}
+  #nav-meta{font-size:11px;color:rgba(255,255,255,0.18);letter-spacing:0.06em}
+
+  /* risk score card */
+  .risk-ring{
+    display:flex;align-items:center;gap:14px;margin-top:6px;
+  }
+  .risk-arc{
+    width:54px;height:54px;flex-shrink:0;
+    border-radius:50%;
+    background:conic-gradient(var(--rc,#4ade80) 0% var(--rp,0%), #1c1c1c var(--rp,0%) 100%);
+    display:flex;align-items:center;justify-content:center;
+    position:relative;
+  }
+  .risk-arc::after{
+    content:'';position:absolute;inset:8px;border-radius:50%;background:#0e0e0e;
+  }
+  .risk-arc-val{
+    font-size:0.75rem;font-weight:300;color:#eee;position:relative;z-index:1;
+  }
+  .risk-label-col{display:flex;flex-direction:column;gap:3px}
+  .risk-level{font-size:0.68rem;color:#888;letter-spacing:0.06em}
+
+  /* milestones */
+  #milestone-row{
+    position:relative;height:18px;flex-basis:100%;margin:0 0 -4px;
+    pointer-events:none;
+  }
+  .ms{
+    position:absolute;transform:translateX(-50%);
+    font-size:0.52rem;letter-spacing:0.1em;color:rgba(255,255,255,0.3);text-transform:lowercase;
+    white-space:nowrap;
+  }
+  .ms.ms-now{color:rgba(255,255,255,0.55)}
+  .ms.ms-end{color:rgba(255,107,53,0.7)}
 
   @media (max-width: 640px) {
     body { flex-direction: column; overflow: auto; height: auto; min-height: 100vh; }
 
+    #nav-bar { padding: 8px 14px; }
     #header {
       padding: 10px 14px;
       flex-direction: column;
@@ -152,6 +195,8 @@
       gap: 10px;
     }
 
+    #left-col { flex: none; width: 100%; overflow: visible; }
+
     #controls {
       padding: 12px 14px;
       flex-wrap: wrap;
@@ -160,6 +205,7 @@
     #year-slider { min-width: 0; width: 100%; order: 3; flex-basis: 100%; }
     #play-btn { order: 1; }
     #slider-label { order: 2; margin-left: auto; }
+    #milestone-row { order: 4; }
 
     .card { padding: 10px; }
     .card-value { font-size: 1.6rem; }
@@ -171,17 +217,48 @@
 <div id="page-loader"><div><div class="loader-label">rendering house impact model</div><div class="loader-dots"><span></span><span></span><span></span></div></div></div>
 <script>window.addEventListener('load',function(){var l=document.getElementById('page-loader');if(l){l.classList.add('hidden');setTimeout(function(){l.remove()},450)}});</script>
 
+<div id="nav-bar">
+  <button id="back-btn" onclick="history.length>1?history.back():window.close()">&#8592; 2110</button>
+  <span id="nav-meta">iowa city, ia &nbsp;&middot;&nbsp; house impact model &nbsp;&middot;&nbsp; ssp2-4.5 &nbsp;&middot;&nbsp; no retrofits</span>
+</div>
+
 <div id="header">
-  <h1>2110 BLUE LAWN ROAD &nbsp;·&nbsp; IOWA CITY, IA &nbsp;·&nbsp; CLIMATE IMPACT &nbsp;·&nbsp; NO RETROFITS</h1>
+  <h1>2110 blue lawn road &nbsp;&middot;&nbsp; iowa city, ia &nbsp;&middot;&nbsp; structural impact</h1>
   <div id="year-display">1980</div>
 </div>
 
 <div id="main">
-  <div id="canvas-container">
-    <div id="scenario-badge">SCENARIO: SSP2-4.5 &nbsp;|&nbsp; "MIDDLE OF THE ROAD"</div>
+  <div id="left-col">
+    <div id="canvas-container">
+      <div id="scenario-badge">SCENARIO: SSP2-4.5 &nbsp;|&nbsp; "MIDDLE OF THE ROAD"</div>
+    </div>
+    <div id="controls">
+      <button id="play-btn">&#9654; play</button>
+      <input type="range" id="year-slider" min="0" max="130" value="0" step="1">
+      <div id="slider-label">1980 &#8594; 2110</div>
+      <div id="milestone-row">
+        <span class="ms" style="left:0%">1980</span>
+        <span class="ms ms-now" style="left:35.4%">now</span>
+        <span class="ms" style="left:73.1%">2075</span>
+        <span class="ms ms-end" style="left:100%">2110</span>
+      </div>
+    </div>
   </div>
 
   <div id="sidebar">
+
+    <div class="card">
+      <div class="card-label">Overall Structural Risk</div>
+      <div class="risk-ring">
+        <div class="risk-arc" id="risk-arc">
+          <span class="risk-arc-val" id="risk-arc-val">0</span>
+        </div>
+        <div class="risk-label-col">
+          <div class="card-value" id="stat-risk" style="font-size:1.5rem">—<span class="card-unit">/100</span></div>
+          <div class="risk-level" id="stat-risk-label">calculating</div>
+        </div>
+      </div>
+    </div>
 
     <div class="card">
       <div class="card-label">Annual Mean Temperature</div>
@@ -259,12 +336,6 @@
     </div>
 
   </div>
-</div>
-
-<div id="controls">
-  <button id="play-btn">▶ PLAY</button>
-  <input type="range" id="year-slider" min="0" max="130" value="0" step="1">
-  <div id="slider-label">1980 → 2110</div>
 </div>
 
 <div id="tooltip"></div>
@@ -628,6 +699,25 @@ function update(idx) {
   setBar('wood-bar',  'wood-pct',  d.wood);
   setBar('roof-bar',  'roof-pct',  d.roof);
   setBar('found-bar', 'found-pct', d.found);
+
+  // ── Risk score ────────────────────────────────────────────────────────
+  const riskScore = Math.round(d.wood * 0.30 + d.roof * 0.40 + d.found * 0.30);
+  const riskColor = cssStressColor(riskScore / 100);
+  const riskLevel = riskScore < 25 ? 'low stress'
+                  : riskScore < 50 ? 'moderate degradation'
+                  : riskScore < 75 ? 'significant damage'
+                  : 'critical / end of life';
+  const arcEl = document.getElementById('risk-arc');
+  if (arcEl) {
+    arcEl.style.setProperty('--rc', riskColor);
+    arcEl.style.setProperty('--rp', riskScore + '%');
+  }
+  const riskValEl = document.getElementById('risk-arc-val');
+  if (riskValEl) riskValEl.textContent = riskScore;
+  const statRiskEl = document.getElementById('stat-risk');
+  if (statRiskEl) statRiskEl.innerHTML = `${riskScore}<span class="card-unit">/100</span>`;
+  const riskLabelEl = document.getElementById('stat-risk-label');
+  if (riskLabelEl) { riskLabelEl.textContent = riskLevel; riskLabelEl.style.color = riskColor; }
 }
 
 // ═══════════════════════════════════════════════════════════════════════
