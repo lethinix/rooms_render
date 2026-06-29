@@ -161,7 +161,7 @@ const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerH
 camera.position.set(0, 0, 0.1);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 container.appendChild(renderer.domElement);
 
@@ -217,7 +217,8 @@ renderer.domElement.addEventListener('touchend', (e) => {
 // ── Panorama sphere (texture swapped on room change) ──────────────────────────
 const loader = new THREE.TextureLoader();
 const sphereMat = new THREE.MeshBasicMaterial({ side: THREE.BackSide, transparent: true, opacity: 1 });
-const sphere = new THREE.Mesh(new THREE.SphereGeometry(500, 60, 40), sphereMat);
+const IS_LOW_END = IS_TOUCH && navigator.hardwareConcurrency <= 4;
+const sphere = new THREE.Mesh(new THREE.SphereGeometry(500, IS_LOW_END ? 32 : 60, IS_LOW_END ? 24 : 40), sphereMat);
 scene.add(sphere);
 
 // ── Loading spinner ───────────────────────────────────────────────────────────

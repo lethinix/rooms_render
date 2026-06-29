@@ -352,19 +352,18 @@ html,body{background:#070707;color:#fff;font-family:Inter,system-ui,sans-serif;o
     Plotly.react(mainChart,traces,{
       paper_bgcolor:'#0a0a0a',
       plot_bgcolor:'#111',
-      margin:{l:mob?42:52,r:10,t:44,b:28},
+      margin:{l:mob?42:52,r:10,t:30,b:28},
       height:mob?290:450,
-      autosize:true,
       hovermode:'x unified',
+      showlegend:false,
       font:{family:'Inter,system-ui,sans-serif',color:'rgba(255,255,255,.75)',size:mob?11:12},
-      legend:{orientation:'h',x:0,y:1.15,font:{size:9,color:'rgba(255,255,255,.55)'},bgcolor:'transparent'},
       title:{text:cfg.title,font:{size:mob?13:15,color:'rgba(255,255,255,.85)'},x:0.02,xanchor:'left'},
       xaxis:{range:[start,end],showgrid:true,gridcolor:'rgba(255,255,255,.06)',zerolinecolor:'rgba(255,255,255,.06)',title:{text:'year',font:{color:'rgba(255,255,255,.4)',size:10}},color:'rgba(255,255,255,.5)',tickfont:{size:9}},
       yaxis:{showgrid:true,gridcolor:'rgba(255,255,255,.06)',zerolinecolor:'rgba(255,255,255,.06)',title:{text:cfg.yLabel,font:{color:'rgba(255,255,255,.4)',size:10}},color:'rgba(255,255,255,.5)',tickfont:{size:9}},
       dragmode:'pan',
       shapes:[{type:'line',x0:yr,x1:yr,y0:0,y1:1,yref:'paper',line:{color:'rgba(110,231,183,.7)',width:1.5,dash:'dot'}}],
-      annotations:[{x:yr,y:1.07,yref:'paper',text:''+yr,showarrow:false,xanchor:'center',font:{size:10,color:'#6ee7b7'}}]
-    },{displayModeBar:false,responsive:true,scrollZoom:true});
+      annotations:[{x:yr,y:1.04,yref:'paper',text:''+yr,showarrow:false,xanchor:'center',font:{size:10,color:'#6ee7b7'}}]
+    },{displayModeBar:false,responsive:true,scrollZoom:false});
   }
 
   graphButtons.forEach(function(btn){
